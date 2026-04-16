@@ -52,18 +52,49 @@ def show():
     st.markdown(f"**Firme active ({len(active)}):**")
 
     for firma in active:
-        with st.container(border=True):
-            col_n, col_t, col_ang, col_dezact = st.columns([3, 2, 1, 1])
+        with st.expander(f"🏢 {firma['nume_firma']} — {TIPURI_CONTRACT.get(firma['tip_contract'], '')}"):
+            toti = db.get_angajati_firma(firma['id'], doar_activi=False)
+            activi_ang = [a for a in toti if a['activ']]
+            inactivi_ang = [a for a in toti if not a['activ']]
 
-            col_n.write(f"**{firma['nume_firma']}**")
-            col_t.write(TIPURI_CONTRACT.get(firma['tip_contract'], firma['tip_contract']))
-
-            angajati = db.get_angajati_firma(firma['id'], doar_activi=True)
-            col_ang.metric("Angajați activi", len(angajati))
-
-            if col_dezact.button("🔴 Dezactivează", key=f"dezact_firma_{firma['id']}", use_container_width=True):
+            col_info, col_dezact_f = st.columns([4, 1])
+            col_info.caption(f"Angajați activi: {len(activi_ang)} | Inactivi: {len(inactivi_ang)}")
+            if col_dezact_f.button("🔴 Dezactivează firma", key=f"dezact_firma_{firma['id']}", use_container_width=True):
                 db.update_firma(firma['id'], firma['nume_firma'], firma['tip_contract'], False)
                 st.rerun()
+
+            st.divider()
+
+            # Adaugare angajat de catre admin
+            col_inp, col_btn = st.columns([4, 1])
+            nou = col_inp.text_input("Adaugă angajat:", key=f"new_ang_{firma['id']}", placeholder="Nume și prenume", label_visibility="collapsed")
+            with col_btn:
+                if st.button("➕ Adaugă", key=f"btn_add_ang_{firma['id']}", use_container_width=True):
+                    if nou.strip():
+                        db.add_angajat(firma['id'], nou.strip())
+                        st.success(f"Adăugat: {nou.strip()}")
+                        st.rerun()
+
+            # Lista angajati activi
+            if activi_ang:
+                for ang in activi_ang:
+                    ca, cb = st.columns([5, 1])
+                    ca.write(f"👤 {ang['nume_angajat']}")
+                    if cb.button("Concediu", key=f"adm_dezact_{ang['id']}", use_container_width=True):
+                        db.toggle_angajat(ang['id'], False)
+                        st.rerun()
+            else:
+                st.info("Niciun angajat activ.")
+
+            # Angajati inactivi
+            if inactivi_ang:
+                st.caption(f"Inactivi ({len(inactivi_ang)}):")
+                for ang in inactivi_ang:
+                    ca, cb = st.columns([5, 1])
+                    ca.write(f"💤 {ang['nume_angajat']}")
+                    if cb.button("Reactivează", key=f"adm_act_{ang['id']}", use_container_width=True):
+                        db.toggle_angajat(ang['id'], True)
+                        st.rerun()
 
     if inactive:
         with st.expander(f"Firme inactive ({len(inactive)})"):
