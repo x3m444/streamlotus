@@ -204,19 +204,20 @@ def _render_gatire(data_selectata):
 def _render_impachetare(data_selectata):
     """
     Afiseaza comenzile reale ale clientilor (de la receptie).
-    O comanda poate fi ambalata DOAR cand toate produsele sunt 'gatit'.
+    O comanda poate fi ambalata DOAR cand:
+      1. Toate produsele sunt 'gatit'
+      2. Stocul lansat de admin acopera cantitatea ceruta
     Dupa ambalare → status = 'pregatit' → dispare din flux.
     """
     st.subheader("📦 Comenzi de Ambalat")
 
-    # Luam comenzile cu status 'nou' de la clienti reali
     comenzi = db.get_comenzi_receptie(data_selectata, status_filtru='nou')
+    stoc = db.get_stoc_zi(data_selectata)
 
     if not comenzi:
         st.success("✅ Nicio comandă în așteptare. Toate au fost ambalate!")
         return
 
-    # Contor rapid: cate sunt gata vs cate asteapta
     gata_count = sum(
         1 for c in comenzi
         if c.get('detalii') and all('|gatit' in l for l in c['detalii'].split(', '))
@@ -231,14 +232,35 @@ def _render_impachetare(data_selectata):
         nr_gatite = sum(1 for l in linii if '|gatit' in l)
         toate_gata = (nr_total > 0 and nr_total == nr_gatite)
 
-        # Titlul expanderului arata statusul rapid
-        icon = "🟢" if toate_gata else "🟡"
-        status_txt = "GATA DE AMBALAT" if toate_gata else f"ASTEAPTA ({nr_gatite}/{nr_total} gatite)"
+        # Verificare stoc: parsam produsele comenzii si comparam cu stocul ramas
+        lipsa_stoc = []
+        for linie in linii:
+            try:
+                produs_txt, _ = linie.split('|')
+                qty_str, nume = produs_txt.split('x ', 1)
+                nume = nume.strip()
+                qty = int(qty_str.strip())
+                if nume in stoc and stoc[nume]['ramas'] < qty:
+                    lipsa_stoc.append(
+                        f"{nume}: necesar {qty}, disponibil {max(stoc[nume]['ramas'], 0)}"
+                    )
+            except Exception:
+                continue
+
+        stoc_ok = len(lipsa_stoc) == 0
+
+        icon = "🟢" if (toate_gata and stoc_ok) else ("🔴" if lipsa_stoc else "🟡")
+        if not stoc_ok:
+            status_txt = f"STOC INSUFICIENT"
+        elif toate_gata:
+            status_txt = "GATA DE AMBALAT"
+        else:
+            status_txt = f"ASTEAPTA ({nr_gatite}/{nr_total} gatite)"
+
         ora = str(cmd.get('ora_livrare_estimata', ''))[:5]
         titlu = f"{icon} {status_txt} | #{cmd['id']} — {cmd['client']} | ora {ora}"
 
-        # Comenzile gata se deschid automat
-        with st.expander(titlu, expanded=toate_gata):
+        with st.expander(titlu, expanded=(toate_gata or bool(lipsa_stoc))):
             col_produse, col_actiuni = st.columns([3, 1])
 
             with col_produse:
@@ -259,9 +281,12 @@ def _render_impachetare(data_selectata):
                     f"💳 {cmd.get('metoda_plata', '').upper()}"
                 )
 
+                if lipsa_stoc:
+                    st.error("⚠️ Stoc insuficient:\n" + "\n".join(f"• {l}" for l in lipsa_stoc))
+
             with col_actiuni:
-                st.write("")  # spatiu vertical
-                if toate_gata:
+                st.write("")
+                if toate_gata and stoc_ok:
                     if st.button(
                         "📦 Ambalat!",
                         key=f"pack_{cmd['id']}",
@@ -269,6 +294,17 @@ def _render_impachetare(data_selectata):
                     ):
                         db.update_status_comanda(engine, cmd['id'], 'pregatit')
                         st.success(f"Comanda #{cmd['id']} marcată ca PREGĂTITĂ!")
+                        st.rerun()
+                elif lipsa_stoc:
+                    if st.button(
+                        "❌ Anulează",
+                        key=f"cancel_{cmd['id']}",
+                        use_container_width=True,
+                        type="primary",
+                        help="Stoc insuficient — anulează comanda"
+                    ):
+                        db.delete_comanda(cmd['id'])
+                        st.warning(f"Comanda #{cmd['id']} anulată.")
                         st.rerun()
                 else:
                     st.button(

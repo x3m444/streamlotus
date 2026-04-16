@@ -413,6 +413,58 @@ def update_status_batch(engine, data, nume_produs, noul_status):
 
 
 # =============================================================
+# STOC PRODUCTIE
+# =============================================================
+
+def get_stoc_zi(data):
+    """
+    Calculeaza stocul disponibil per produs pentru o zi.
+
+    Returneaza dict: { nume_produs: { 'lansat': X, 'ambalat': Y, 'ramas': Z } }
+
+    - lansat  = cantitatea totala din loturile admin (client_id=999)
+    - ambalat = cantitatea din comenzile clientilor deja ambalate/livrate
+                (status IN pregatit, pedrum, livrat) cu tip_linie='standard'
+    - ramas   = lansat - ambalat  (poate fi negativ daca s-au primit prea multe comenzi)
+    """
+    engine = get_engine()
+    with engine.connect() as conn:
+        # Stocul lansat de admin
+        r_lansat = conn.execute(text("""
+            SELECT l.nume_produs, SUM(l.cantitate) AS total
+            FROM comenzi_linii l
+            JOIN comenzi c ON l.comanda_id = c.id
+            WHERE c.data_comanda = :data
+              AND c.client_id = 999
+            GROUP BY l.nume_produs
+        """), {"data": data})
+        lansat = {row[0]: int(row[1]) for row in r_lansat}
+
+        # Cantitatea deja angajata in comenzi ambalate/pe drum/livrate
+        r_ambalat = conn.execute(text("""
+            SELECT l.nume_produs, SUM(l.cantitate) AS total
+            FROM comenzi_linii l
+            JOIN comenzi c ON l.comanda_id = c.id
+            WHERE c.data_comanda = :data
+              AND c.client_id != 999
+              AND c.status IN ('pregatit', 'pedrum', 'livrat')
+              AND l.tip_linie = 'standard'
+            GROUP BY l.nume_produs
+        """), {"data": data})
+        ambalat = {row[0]: int(row[1]) for row in r_ambalat}
+
+    stoc = {}
+    for nume, qty_lansat in lansat.items():
+        qty_ambalat = ambalat.get(nume, 0)
+        stoc[nume] = {
+            "lansat":  qty_lansat,
+            "ambalat": qty_ambalat,
+            "ramas":   qty_lansat - qty_ambalat
+        }
+    return stoc
+
+
+# =============================================================
 # STERGERI
 # =============================================================
 

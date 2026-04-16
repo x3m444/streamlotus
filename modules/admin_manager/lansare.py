@@ -24,6 +24,28 @@ def show(data_plan):
     st.subheader("🏭 Lansare Loturi în Producție")
     st.warning(f"📅 Loturile de mai jos vor fi lansate pentru data: **{data_afisata}**")
 
+    # Stoc curent al zilei
+    stoc = db.get_stoc_zi(data_plan)
+    if stoc:
+        with st.expander("📊 Stoc lansat azi — situație curentă", expanded=False):
+            cols = st.columns([3, 1, 1, 1])
+            cols[0].markdown("**Produs**")
+            cols[1].markdown("**Lansat**")
+            cols[2].markdown("**Ambalat**")
+            cols[3].markdown("**Rămas**")
+            for nume, s in stoc.items():
+                c0, c1, c2, c3 = st.columns([3, 1, 1, 1])
+                c0.write(nume)
+                c1.write(s['lansat'])
+                c2.write(s['ambalat'])
+                ramas = s['ramas']
+                if ramas <= 0:
+                    c3.markdown(f":red[**{ramas}**]")
+                elif ramas < 5:
+                    c3.markdown(f":orange[**{ramas}**]")
+                else:
+                    c3.markdown(f":green[**{ramas}**]")
+
     # -------------------------------------------------------
     # PRANZ
     # -------------------------------------------------------
