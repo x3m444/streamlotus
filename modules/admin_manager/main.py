@@ -11,7 +11,7 @@ import database as db
 import utils
 from datetime import date
 
-from modules.admin_manager import lansare, planificare, nomenclator, rapoarte
+from modules.admin_manager import lansare, planificare, nomenclator, rapoarte, firme
 
 
 def show_admin():
@@ -36,11 +36,12 @@ def show_admin():
     st.divider()
 
     # --- TABURI PRINCIPALE ---
-    tab_lansare, tab_monitor, tab_plan, tab_nom = st.tabs([
+    tab_lansare, tab_monitor, tab_plan, tab_nom, tab_firme = st.tabs([
         "🚀 Lansare Producție",
         "📊 Monitorizare Comenzi",
         "📅 Planificare Săptămânală",
         "📋 Gestiune Nomenclator",
+        "🏢 Firme Contracte",
     ])
 
     with tab_lansare:
@@ -54,3 +55,6 @@ def show_admin():
 
     with tab_nom:
         nomenclator.show()
+
+    with tab_firme:
+        firme.show()

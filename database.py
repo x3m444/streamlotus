@@ -465,6 +465,134 @@ def get_stoc_zi(data):
 
 
 # =============================================================
+# FIRME & ANGAJATI
+# =============================================================
+
+def get_all_firme(doar_active=True):
+    engine = get_engine()
+    with engine.connect() as conn:
+        query = "SELECT id, nume_firma, tip_contract, activ FROM firme"
+        if doar_active:
+            query += " WHERE activ = TRUE"
+        query += " ORDER BY nume_firma"
+        return [dict(r._mapping) for r in conn.execute(text(query))]
+
+
+def add_firma(nume_firma, tip_contract='pranz_cina'):
+    engine = get_engine()
+    with engine.begin() as conn:
+        conn.execute(text("""
+            INSERT INTO firme (nume_firma, tip_contract) VALUES (:n, :t)
+        """), {"n": nume_firma, "t": tip_contract})
+
+
+def update_firma(firma_id, nume_firma, tip_contract, activ):
+    engine = get_engine()
+    with engine.begin() as conn:
+        conn.execute(text("""
+            UPDATE firme SET nume_firma=:n, tip_contract=:t, activ=:a WHERE id=:id
+        """), {"n": nume_firma, "t": tip_contract, "a": activ, "id": firma_id})
+
+
+def get_angajati_firma(firma_id, doar_activi=True):
+    engine = get_engine()
+    with engine.connect() as conn:
+        query = "SELECT id, nume_angajat, activ FROM angajati_firme WHERE firma_id = :fid"
+        if doar_activi:
+            query += " AND activ = TRUE"
+        query += " ORDER BY nume_angajat"
+        return [dict(r._mapping) for r in conn.execute(text(query), {"fid": firma_id})]
+
+
+def add_angajat(firma_id, nume_angajat):
+    engine = get_engine()
+    with engine.begin() as conn:
+        conn.execute(text("""
+            INSERT INTO angajati_firme (firma_id, nume_angajat) VALUES (:fid, :n)
+        """), {"fid": firma_id, "n": nume_angajat})
+
+
+def toggle_angajat(angajat_id, activ):
+    engine = get_engine()
+    with engine.begin() as conn:
+        conn.execute(text("""
+            UPDATE angajati_firme SET activ = :a WHERE id = :id
+        """), {"a": activ, "id": angajat_id})
+
+
+def get_angajati_serviti_azi(firma_id, data):
+    """Returneaza set de angajat_id care au fost deja serviti azi."""
+    engine = get_engine()
+    with engine.connect() as conn:
+        r = conn.execute(text("""
+            SELECT angajat_id FROM serviri_ghiseu
+            WHERE firma_id = :fid AND data_servire = :data AND angajat_id IS NOT NULL
+        """), {"fid": firma_id, "data": data})
+        return {row[0] for row in r}
+
+
+def save_servire(data, tip_servire, produse, firma_id=None, angajat_id=None, comanda_ref_id=None):
+    """
+    Salveaza o servire la ghiseu.
+    produse: [{ 'nume_produs': str, 'cantitate': int, 'din_nevandut': bool }]
+    """
+    engine = get_engine()
+    with engine.begin() as conn:
+        r = conn.execute(text("""
+            INSERT INTO serviri_ghiseu (data_servire, tip_servire, firma_id, angajat_id, comanda_ref_id)
+            VALUES (:data, :tip, :fid, :aid, :cid)
+            RETURNING id
+        """), {"data": data, "tip": tip_servire, "fid": firma_id, "aid": angajat_id, "cid": comanda_ref_id})
+        servire_id = r.fetchone()[0]
+
+        for p in produse:
+            conn.execute(text("""
+                INSERT INTO serviri_ghiseu_linii (servire_id, nume_produs, cantitate, din_nevandut)
+                VALUES (:sid, :n, :q, :nev)
+            """), {"sid": servire_id, "n": p['nume_produs'], "q": p['cantitate'], "nev": p.get('din_nevandut', False)})
+
+            # Daca e din nevandut, actualizeaza cantitatea servita
+            if p.get('din_nevandut'):
+                conn.execute(text("""
+                    UPDATE stoc_nevandut
+                    SET cantitate_servita = cantitate_servita + :q
+                    WHERE data = :data AND nume_produs = :n
+                """), {"q": p['cantitate'], "data": data, "n": p['nume_produs']})
+
+
+def get_loturi_eveniment(data):
+    """Loturile de tip special/eveniment lansate de admin pentru o zi."""
+    engine = get_engine()
+    with engine.connect() as conn:
+        r = conn.execute(text("""
+            SELECT c.id, c.observatii AS descriere, c.tip_comanda,
+                   string_agg(l.cantitate || 'x ' || l.nume_produs, ', ' ORDER BY l.id) AS produse
+            FROM comenzi c
+            JOIN comenzi_linii l ON c.id = l.comanda_id
+            WHERE c.data_comanda = :data
+              AND c.client_id = 999
+              AND c.tip_comanda IN ('special', 'eveniment')
+            GROUP BY c.id, c.observatii, c.tip_comanda
+            ORDER BY c.id
+        """), {"data": data})
+        return [dict(r._mapping) for r in r]
+
+
+def get_serviri_eveniment_azi(comanda_ref_id, data):
+    """Totalul servit dintr-un lot de eveniment."""
+    engine = get_engine()
+    with engine.connect() as conn:
+        r = conn.execute(text("""
+            SELECT l.nume_produs, SUM(l.cantitate) AS total_servit
+            FROM serviri_ghiseu_linii l
+            JOIN serviri_ghiseu s ON l.servire_id = s.id
+            WHERE s.comanda_ref_id = :cid AND s.data_servire = :data
+            GROUP BY l.nume_produs
+        """), {"cid": comanda_ref_id, "data": data})
+        return {row[0]: row[1] for row in r}
+
+
+# =============================================================
 # NEVANDUT
 # =============================================================
 

@@ -1,6 +1,6 @@
 import streamlit as st
 import database as db
-from modules import frontend, receptie, bucatarie, livrare
+from modules import frontend, receptie, bucatarie, livrare, ghiseu
 from modules.admin_manager import main as admin_main
 
 st.set_page_config(page_title="Cantina Lotus", layout="wide", page_icon="🍱")
@@ -15,7 +15,7 @@ else:
     if 'rol' not in st.session_state:
         st.session_state['rol'] = "Admin"
 
-    rol = st.sidebar.selectbox("Rol (Test):", ["Admin", "Recepție", "Bucătărie", "Livrator"])
+    rol = st.sidebar.selectbox("Rol (Test):", ["Admin", "Recepție", "Bucătărie", "Ghișeu", "Livrator"])
     st.session_state['rol'] = rol
 
     if rol == "Admin":
@@ -24,7 +24,6 @@ else:
         with t2: receptie.show_receptie()
         with t3: bucatarie.show_bucatarie()
         with t4:
-
             livratori = db.get_lista_livratori()
             if livratori:
                 sofer_admin = st.selectbox("Vizualizează ruta livratorului:", livratori, key="sofer_admin_view")
@@ -37,6 +36,9 @@ else:
 
     elif rol == "Bucătărie":
         bucatarie.show_bucatarie()
+
+    elif rol == "Ghișeu":
+        ghiseu.show_ghiseu()
 
     elif rol == "Livrator":
         livratori = db.get_lista_livratori()
