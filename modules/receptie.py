@@ -105,7 +105,7 @@ def show_receptie():
     # --- 2. PRELUARE DATE (Sursă Dublă: Planificare la data aleasă + Nomenclator) ---
     # FOARTE IMPORTANT: Folosim data_selectata de mai sus
     plan_zi = db.get_meniu_planificat(data_selectata)
-    nomenclator_complet = db.get_nomenclator_produse()
+    nomenclator_complet = db.get_toate_produsele()
 
     # A. Pentru Meniuri Rapide (Din Planificarea datei alese)
     lista_f1_plan = [p for p in plan_zi if p['categorie'] == 'felul_1']
@@ -136,17 +136,21 @@ def show_receptie():
  # --- ZONA A: MENIURI RAPIDE (DINAMICĂ ȘI FĂRĂ HARDCODING) ---
 # --- FUNCȚIE INTERNĂ PENTRU GRUPARE (Pune-o chiar aici în show_receptie) ---
     def adauga_in_buffer(nume, cantitate, pret, tip):
-        # Căutăm dacă produsul există deja în coș (buffer)
+        # tip_linie la nivel de produs:
+        #   'special' = nu e in meniul zilei → merge direct la bucatarie
+        #   'standard' = din meniul zilei → acoperit de lotul admin
+        tip_linie = 'special' if tip in ('Special', 'Custom') else 'standard'
+
         for item in st.session_state.buffer_comanda:
-            if item['nume'] == nume:
+            if item['nume'] == nume and item['tip_linie'] == tip_linie:
                 item['cantitate'] += cantitate
                 return
-        # Dacă e nou, îl adăugăm
         st.session_state.buffer_comanda.append({
-            "nume": nume, 
-            "cantitate": cantitate, 
-            "pret": pret, 
-            "tip": tip
+            "nume": nume,
+            "cantitate": cantitate,
+            "pret": pret,
+            "tip": tip,
+            "tip_linie": tip_linie
         })
 
     # --- ZONA A: MENIURI RAPIDE (DINAMICĂ ȘI FĂRĂ HARDCODING) ---
@@ -351,8 +355,9 @@ def show_receptie():
         if not st.session_state.buffer_comanda:
             st.warning("⚠️ Comanda nu are produse!")
         else:
-            # Trimitem variabila data_selectata către funcția de salvare
-            # Am adăugat 'data_comanda=data_selectata' în apelul funcției
+            # tip_comanda = mereu 'livrare' pentru comenzile de la receptie.
+            # Distinctia standard vs special se face la nivel de linie (tip_linie),
+            # nu la nivel de comanda — o comanda poate contine ambele tipuri.
             succes = db.save_comanda_finala(
                 client_id=client_id,
                 produse=st.session_state.buffer_comanda,
@@ -361,8 +366,8 @@ def show_receptie():
                 ora=ora_livrare,
                 obs=obs_comanda,
                 plata=metoda_plata,
-                tip_comanda="livrare",
-                data_comanda=data_selectata  # <--- ACESTA ESTE PARAMETRUL NOU
+                tip_comanda='livrare',
+                data_comanda=data_selectata
             )
             
             if succes:
@@ -374,10 +379,13 @@ def show_receptie():
 def render_rezumat_zi():
     data_azi_ro = utils.get_ro_time().date()
     st.header(f"📋 Situație Livrări - {data_azi_ro.strftime('%d-%m-%Y')}")
-    
+
     data_pt_rezumat = st.date_input("Selectează data pentru rezumat:", data_azi_ro)
-    comenzi = db.get_rezumat_zi(data_pt_rezumat) 
-    
+
+    # Folosim get_comenzi_receptie (client_id != 999) pentru a exclude
+    # loturile interne ale adminului din totalul de incasat
+    comenzi = db.get_comenzi_receptie(data_pt_rezumat)
+
     if not comenzi:
         st.info(f"Fără comenzi în data de {data_pt_rezumat.strftime('%d-%m-%Y')}.")
         return

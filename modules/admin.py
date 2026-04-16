@@ -4,6 +4,8 @@ import database as db
 import utils  # Importăm fișierul nou creat
 from datetime import date
 
+
+engine = db.get_engine()
 def show_menu_editor():
     st.title("👨‍🍳 Administrare Bucătărie")
 
