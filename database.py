@@ -465,6 +465,28 @@ def get_stoc_zi(data):
 
 
 # =============================================================
+# PRODUSE GATITE
+# =============================================================
+
+def get_produse_gatite_azi(data):
+    """
+    Returneaza set cu numele produselor marcate ca 'gatit' de bucatarie azi.
+    Folosit de Ghiseu ca sa afiseze doar ce e gata de servit.
+    """
+    engine = get_engine()
+    with engine.connect() as conn:
+        r = conn.execute(text("""
+            SELECT DISTINCT l.nume_produs
+            FROM comenzi_linii l
+            JOIN comenzi c ON l.comanda_id = c.id
+            WHERE c.data_comanda = :data
+              AND c.client_id = 999
+              AND l.status = 'gatit'
+        """), {"data": data})
+        return {row[0] for row in r}
+
+
+# =============================================================
 # FIRME & ANGAJATI
 # =============================================================
 

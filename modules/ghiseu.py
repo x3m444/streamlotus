@@ -52,20 +52,22 @@ def _render_bon_casa(data_azi):
 
     plan_zi = db.get_meniu_planificat(data_azi)
     stoc = db.get_stoc_zi(data_azi)
+    gatite = db.get_produse_gatite_azi(data_azi)
 
-    lista_f1 = [p for p in plan_zi if p['categorie'] == 'felul_1']
-    lista_f2 = [p for p in plan_zi if p['categorie'] == 'felul_2']
+    lista_f1     = [p for p in plan_zi if p['categorie'] == 'felul_1']
+    lista_f2     = [p for p in plan_zi if p['categorie'] == 'felul_2']
+    lista_salate = [p for p in plan_zi if p['categorie'] == 'salate']
 
     if not lista_f1 and not lista_f2:
         st.warning("Nu există meniu planificat pentru astăzi.")
         return
 
+    if not gatite:
+        st.info("⏳ Bucătăria nu a marcat încă niciun produs ca gătit. Reîncarcă pagina când mâncarea e gata.")
+        return
+
     if 'bon_buffer' not in st.session_state:
         st.session_state.bon_buffer = []
-
-    # Butoane rapide meniu
-    st.markdown("**Adaugă în bon:**")
-    col1, col2, col3 = st.columns(3)
 
     def adauga_bon(nume, qty=1, din_nevandut=False):
         for item in st.session_state.bon_buffer:
@@ -78,37 +80,73 @@ def _render_bon_casa(data_azi):
             "din_nevandut": din_nevandut
         })
 
-    with col1:
-        if lista_f1:
-            f1 = lista_f1[0]
-            stoc_f1 = stoc.get(f1['nume'], {}).get('ramas', 0)
-            if st.button(f"🥣 {f1['nume']}\n({stoc_f1} porții)", use_container_width=True, key="bon_f1"):
-                adauga_bon(f1['nume'])
-                st.rerun()
+    def buton_produs(produs, key, icon="🍽️"):
+        """Randeaza un buton pentru un produs — dezactivat daca nu e gatit sau stoc 0."""
+        nume = produs['nume']
+        este_gatit = nume in gatite
+        ramas = stoc.get(nume, {}).get('ramas', 0)
+        disponibil = este_gatit and ramas > 0
 
-    with col2:
-        if lista_f2:
-            f2 = lista_f2[0]
-            stoc_f2 = stoc.get(f2['nume'], {}).get('ramas', 0)
-            if st.button(f"🍖 {f2['nume']}\n({stoc_f2} porții)", use_container_width=True, key="bon_f2v1"):
-                adauga_bon(f2['nume'])
-                st.rerun()
+        label = f"{icon} {nume}\n({'gata' if disponibil else ('⏳ negatit' if not este_gatit else '❌ stoc epuizat')})"
+        if st.button(label, key=key, use_container_width=True, disabled=not disponibil):
+            adauga_bon(nume)
+            st.rerun()
 
-    with col3:
-        if len(lista_f2) >= 2:
-            f2v2 = lista_f2[1]
-            stoc_f2v2 = stoc.get(f2v2['nume'], {}).get('ramas', 0)
-            if st.button(f"🍖 {f2v2['nume']}\n({stoc_f2v2} porții)", use_container_width=True, key="bon_f2v2"):
-                adauga_bon(f2v2['nume'])
-                st.rerun()
+    # --- Meniuri complete (butoane compuse)
+    st.markdown("**🍱 Meniu complet:**")
+    col_v1, col_v2 = st.columns(2)
 
-    # Bon curent
+    f1    = lista_f1[0]    if lista_f1           else None
+    f2v1  = lista_f2[0]    if len(lista_f2) >= 1 else None
+    f2v2  = lista_f2[1]    if len(lista_f2) >= 2 else None
+    salata = lista_salate[0] if lista_salate       else None
+
+    def meniu_disponibil(componente):
+        return all(p['nume'] in gatite and stoc.get(p['nume'], {}).get('ramas', 0) > 0 for p in componente if p)
+
+    with col_v1:
+        componente_v1 = [p for p in [f1, f2v1, salata] if p]
+        disponibil_v1 = meniu_disponibil(componente_v1)
+        if st.button(
+            f"Meniu V1\n{' + '.join(p['nume'] for p in componente_v1)}",
+            key="bon_meniu_v1", use_container_width=True, disabled=not disponibil_v1
+        ):
+            for p in componente_v1:
+                adauga_bon(p['nume'])
+            st.rerun()
+
+    with col_v2:
+        componente_v2 = [p for p in [f1, f2v2, salata] if p]
+        disponibil_v2 = meniu_disponibil(componente_v2)
+        if st.button(
+            f"Meniu V2\n{' + '.join(p['nume'] for p in componente_v2)}",
+            key="bon_meniu_v2", use_container_width=True, disabled=not disponibil_v2
+        ):
+            for p in componente_v2:
+                adauga_bon(p['nume'])
+            st.rerun()
+
+    # --- Porții solo
+    st.markdown("**🍽️ Porție solo:**")
+    cols_solo = st.columns(4)
+    produse_solo = [
+        (f1,    "🥣", "bon_f1"),
+        (f2v1,  "🍖", "bon_f2v1"),
+        (f2v2,  "🍖", "bon_f2v2"),
+        (salata,"🥗", "bon_salata"),
+    ]
+    for col, (produs, icon, key) in zip(cols_solo, produse_solo):
+        with col:
+            if produs:
+                buton_produs(produs, key=key, icon=icon)
+
+    # --- Bon curent
     if st.session_state.bon_buffer:
         st.divider()
         st.markdown("**Bon curent:**")
         for i, item in enumerate(st.session_state.bon_buffer):
             c1, c2, c3 = st.columns([4, 1, 1])
-            c1.write(f"{'🔄' if item['din_nevandut'] else ''} {item['nume_produs']}")
+            c1.write(f"{'🔄 ' if item['din_nevandut'] else ''}{item['nume_produs']}")
             c2.write(f"x{item['cantitate']}")
             if c3.button("❌", key=f"del_bon_{i}"):
                 st.session_state.bon_buffer.pop(i)
@@ -136,6 +174,11 @@ def _render_firme(data_azi):
     firme = db.get_all_firme(doar_active=True)
     if not firme:
         st.info("Nu există firme active. Adminul trebuie să adauge firme cu contract.")
+        return
+
+    gatite = db.get_produse_gatite_azi(data_azi)
+    if not gatite:
+        st.info("⏳ Bucătăria nu a marcat încă niciun produs ca gătit. Reîncarcă pagina când mâncarea e gata.")
         return
 
     firma_sel = st.selectbox(
