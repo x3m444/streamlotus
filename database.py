@@ -201,13 +201,27 @@ def save_comanda_finala(client_id, produse, total, sofer, ora, obs, plata, tip_c
         })
         new_id = res.fetchone()[0]
 
+        # Produse deja marcate 'gatit' de bucatarie pentru ziua comenzii
+        # → liniile noi primesc direct status 'gatit', nu mai asteapta batch update
+        r_gatite = conn.execute(text("""
+            SELECT DISTINCT l.nume_produs
+            FROM comenzi_linii l
+            JOIN comenzi c ON l.comanda_id = c.id
+            WHERE c.data_comanda = :data
+              AND c.client_id = 999
+              AND l.status = 'gatit'
+        """), {"data": data_comanda})
+        produse_gatite = {row[0] for row in r_gatite}
+
         for p in produse:
+            status_linie = 'gatit' if p['nume'] in produse_gatite else 'nou'
             conn.execute(text("""
-                INSERT INTO comenzi_linii (comanda_id, nume_produs, cantitate, pret_unitar, tip_linie)
-                VALUES (:mid, :nume, :qty, :pret, :tip_linie)
+                INSERT INTO comenzi_linii (comanda_id, nume_produs, cantitate, pret_unitar, tip_linie, status)
+                VALUES (:mid, :nume, :qty, :pret, :tip_linie, :status)
             """), {
                 "mid": new_id, "nume": p['nume'], "qty": p['cantitate'],
-                "pret": p['pret'], "tip_linie": p.get('tip_linie', 'standard')
+                "pret": p['pret'], "tip_linie": p.get('tip_linie', 'standard'),
+                "status": status_linie
             })
     return True
 
@@ -440,7 +454,7 @@ def get_stoc_zi(data):
         """), {"data": data})
         lansat = {row[0]: int(row[1]) for row in r_lansat}
 
-        # Cantitatea deja angajata in comenzi ambalate/pe drum/livrate
+        # Comenzi receptie ambalate/pe drum/livrate
         r_ambalat = conn.execute(text("""
             SELECT l.nume_produs, SUM(l.cantitate) AS total
             FROM comenzi_linii l
@@ -453,13 +467,41 @@ def get_stoc_zi(data):
         """), {"data": data})
         ambalat = {row[0]: int(row[1]) for row in r_ambalat}
 
+        # Serviri ghiseu (firme + bon casa + eveniment) — exclus nevandut si din_buffer
+        r_ghiseu = conn.execute(text("""
+            SELECT l.nume_produs, SUM(l.cantitate) AS total
+            FROM serviri_ghiseu_linii l
+            JOIN serviri_ghiseu s ON l.servire_id = s.id
+            WHERE s.data_servire = :data
+              AND l.din_nevandut = FALSE
+              AND (s.din_buffer IS NULL OR s.din_buffer = FALSE)
+            GROUP BY l.nume_produs
+        """), {"data": data})
+        for row in r_ghiseu:
+            ambalat[row[0]] = ambalat.get(row[0], 0) + int(row[1])
+
+    # Buffer ambalare — deducem cantitatea totala pre-ambalata per produs
+    plan_zi = get_meniu_planificat(data)
+    comp = _plan_to_componente(plan_zi)
+    buf = get_buffer_ambalare(data)
+    for tip, buf_info in buf.items():
+        for prod in comp.get(tip, []):
+            ambalat[prod['nume']] = ambalat.get(prod['nume'], 0) + buf_info['cantitate']
+
+    total_rezervat = get_total_rezervat_firme(data)
+    nr_produse = max(len(lansat), 1)
+    # Distribuim rezervarea uniform pe produse (informativ, fara blocare dura)
+    rezervat_per_produs = total_rezervat // nr_produse if lansat else 0
+
     stoc = {}
     for nume, qty_lansat in lansat.items():
-        qty_ambalat = ambalat.get(nume, 0)
+        qty_ambalat  = ambalat.get(nume, 0)
+        qty_rezervat = rezervat_per_produs
         stoc[nume] = {
-            "lansat":  qty_lansat,
-            "ambalat": qty_ambalat,
-            "ramas":   qty_lansat - qty_ambalat
+            "lansat":   qty_lansat,
+            "rezervat": qty_rezervat,
+            "ambalat":  qty_ambalat,
+            "ramas":    qty_lansat - qty_ambalat,
         }
     return stoc
 
@@ -726,6 +768,194 @@ def sterge_nevandut(data, nume_produs):
         conn.execute(text("""
             DELETE FROM stoc_nevandut WHERE data = :data AND nume_produs = :nume
         """), {"data": data, "nume": nume_produs})
+
+
+# =============================================================
+# REZERVARI FIRME
+# =============================================================
+
+def init_rezervari_firme():
+    """Creeaza tabela rezervari_firme daca nu exista."""
+    engine = get_engine()
+    with engine.begin() as conn:
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS rezervari_firme (
+                firma_id   INTEGER NOT NULL REFERENCES firme(id),
+                data_rez   DATE    NOT NULL,
+                cantitate  INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (firma_id, data_rez)
+            )
+        """))
+
+
+def save_rezervare_firma(firma_id, data, cantitate):
+    """Upsert rezervare pentru o firma pe o zi (0 = sterge)."""
+    engine = get_engine()
+    with engine.begin() as conn:
+        if cantitate <= 0:
+            conn.execute(text("""
+                DELETE FROM rezervari_firme
+                WHERE firma_id = :fid AND data_rez = :data
+            """), {"fid": firma_id, "data": data})
+        else:
+            conn.execute(text("""
+                INSERT INTO rezervari_firme (firma_id, data_rez, cantitate)
+                VALUES (:fid, :data, :qty)
+                ON CONFLICT (firma_id, data_rez)
+                DO UPDATE SET cantitate = EXCLUDED.cantitate
+            """), {"fid": firma_id, "data": data, "qty": cantitate})
+
+
+def get_rezervari_firme_azi(data):
+    """
+    Returneaza dict { firma_id: cantitate } cu rezervarile confirmate pentru ziua data.
+    """
+    engine = get_engine()
+    with engine.connect() as conn:
+        r = conn.execute(text("""
+            SELECT rf.firma_id, f.nume_firma, rf.cantitate
+            FROM rezervari_firme rf
+            JOIN firme f ON f.id = rf.firma_id
+            WHERE rf.data_rez = :data
+        """), {"data": data})
+        return {row[0]: {"nume": row[1], "cantitate": row[2]} for row in r}
+
+
+def get_total_rezervat_firme(data):
+    """Returneaza totalul portiilor rezervate pentru firme pe ziua data."""
+    engine = get_engine()
+    with engine.connect() as conn:
+        r = conn.execute(text("""
+            SELECT COALESCE(SUM(cantitate), 0)
+            FROM rezervari_firme
+            WHERE data_rez = :data
+        """), {"data": data})
+        return int(r.scalar())
+
+
+# =============================================================
+# BUFFER AMBALARE
+# =============================================================
+
+TIP_MENIU_KEYS = ['v1', 'v2', 'solo_f1', 'solo_f2v1', 'solo_f2v2', 'solo_salata']
+
+
+def _plan_to_componente(plan_zi):
+    """Din planul zilei, returneaza componentele per tip_meniu."""
+    f1     = next((p for p in plan_zi if p['categorie'] == 'felul_1'), None)
+    f2list = [p for p in plan_zi if p['categorie'] == 'felul_2']
+    f2v1   = f2list[0] if len(f2list) >= 1 else None
+    f2v2   = f2list[1] if len(f2list) >= 2 else None
+    salata = next((p for p in plan_zi if p['categorie'] == 'salate'), None)
+    return {
+        'v1':          [p for p in [f1, f2v1, salata] if p],
+        'v2':          [p for p in [f1, f2v2, salata] if p],
+        'solo_f1':     [p for p in [f1]               if p],
+        'solo_f2v1':   [p for p in [f2v1]             if p],
+        'solo_f2v2':   [p for p in [f2v2]             if p],
+        'solo_salata': [p for p in [salata]            if p],
+    }
+
+
+def get_buffer_ambalare(data):
+    """
+    Returneaza buffer-ul per tip_meniu pentru ziua data.
+    { tip_meniu: { cantitate, distribuit, disponibil } }
+    """
+    engine = get_engine()
+    with engine.connect() as conn:
+        r = conn.execute(text("""
+            SELECT tip_meniu, cantitate, distribuit
+            FROM buffer_ambalare
+            WHERE data_zi = :data
+        """), {"data": data})
+        return {
+            row[0]: {
+                "cantitate":  row[1],
+                "distribuit": row[2],
+                "disponibil": row[1] - row[2],
+            }
+            for row in r
+        }
+
+
+def add_to_buffer(data, tip_meniu, qty):
+    """Adauga qty portii in buffer (upsert — aduna la ce exista deja)."""
+    engine = get_engine()
+    with engine.begin() as conn:
+        conn.execute(text("""
+            INSERT INTO buffer_ambalare (data_zi, tip_meniu, cantitate, distribuit)
+            VALUES (:data, :tip, :qty, 0)
+            ON CONFLICT (data_zi, tip_meniu)
+            DO UPDATE SET cantitate = buffer_ambalare.cantitate + EXCLUDED.cantitate
+        """), {"data": data, "tip": tip_meniu, "qty": qty})
+
+
+def set_buffer(data, tip_meniu, cantitate):
+    """Seteaza cantitate exacta in buffer (overwrite)."""
+    engine = get_engine()
+    with engine.begin() as conn:
+        if cantitate <= 0:
+            conn.execute(text("""
+                DELETE FROM buffer_ambalare
+                WHERE data_zi = :data AND tip_meniu = :tip
+            """), {"data": data, "tip": tip_meniu})
+        else:
+            conn.execute(text("""
+                INSERT INTO buffer_ambalare (data_zi, tip_meniu, cantitate, distribuit)
+                VALUES (:data, :tip, :qty, 0)
+                ON CONFLICT (data_zi, tip_meniu)
+                DO UPDATE SET cantitate = EXCLUDED.cantitate
+            """), {"data": data, "tip": tip_meniu, "qty": cantitate})
+
+
+def distribuie_din_buffer(data, tip_meniu, firma_id=None, angajat_id=None):
+    """
+    Distribuie 1 portie din buffer.
+    Daca firma_id/angajat_id: creeaza si servire_ghiseu cu din_buffer=TRUE.
+    Returneaza True daca s-a putut distribui, False daca buffer gol.
+    """
+    engine = get_engine()
+    plan_zi = get_meniu_planificat(data)
+    componente = _plan_to_componente(plan_zi)
+    produse = componente.get(tip_meniu, [])
+
+    with engine.begin() as conn:
+        # Verifica disponibil
+        r = conn.execute(text("""
+            SELECT cantitate - distribuit FROM buffer_ambalare
+            WHERE data_zi = :data AND tip_meniu = :tip
+        """), {"data": data, "tip": tip_meniu})
+        row = r.fetchone()
+        if not row or row[0] <= 0:
+            return False
+
+        # Decrement distribuit
+        conn.execute(text("""
+            UPDATE buffer_ambalare
+            SET distribuit = distribuit + 1
+            WHERE data_zi = :data AND tip_meniu = :tip
+        """), {"data": data, "tip": tip_meniu})
+
+        # Creeaza servire_ghiseu cu din_buffer=TRUE
+        if produse:
+            tip_srv = 'firma' if firma_id else 'bon_casa'
+            res = conn.execute(text("""
+                INSERT INTO serviri_ghiseu
+                    (data_servire, tip_servire, firma_id, angajat_id, din_buffer)
+                VALUES (:data, :tip, :fid, :aid, TRUE)
+                RETURNING id
+            """), {"data": data, "tip": tip_srv, "fid": firma_id, "aid": angajat_id})
+            sid = res.fetchone()[0]
+
+            for p in produse:
+                conn.execute(text("""
+                    INSERT INTO serviri_ghiseu_linii
+                        (servire_id, nume_produs, cantitate, din_nevandut)
+                    VALUES (:sid, :produs, 1, FALSE)
+                """), {"sid": sid, "produs": p['nume']})
+
+    return True
 
 
 # =============================================================

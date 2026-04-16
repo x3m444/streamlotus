@@ -1,7 +1,10 @@
 import streamlit as st
 import database as db
-from modules import frontend, receptie, bucatarie, livrare, ghiseu
+from modules import frontend, livrare
 from modules.admin_manager import main as admin_main
+from modules.bucatarie import main as bucatarie_main
+from modules.ghiseu import main as ghiseu_main
+from modules.receptie import main as receptie_main
 
 st.set_page_config(page_title="Cantina Lotus", layout="wide", page_icon="🍱")
 
@@ -21,8 +24,8 @@ else:
     if rol == "Admin":
         t1, t2, t3, t4 = st.tabs(["⚙️ Admin", "📝 Recepție", "👨‍🍳 Bucătărie", "🚚 Livrare"])
         with t1: admin_main.show_admin()
-        with t2: receptie.show_receptie()
-        with t3: bucatarie.show_bucatarie()
+        with t2: receptie_main.show_receptie()
+        with t3: bucatarie_main.show_bucatarie()
         with t4:
             livratori = db.get_lista_livratori()
             if livratori:
@@ -32,13 +35,13 @@ else:
                 st.warning("Nu există livratori configurați în baza de date.")
 
     elif rol == "Recepție":
-        receptie.main_receptie_page()
+        receptie_main.main_receptie_page()
 
     elif rol == "Bucătărie":
-        bucatarie.show_bucatarie()
+        bucatarie_main.show_bucatarie()
 
     elif rol == "Ghișeu":
-        ghiseu.show_ghiseu()
+        ghiseu_main.show_ghiseu()
 
     elif rol == "Livrator":
         livratori = db.get_lista_livratori()

@@ -25,26 +25,32 @@ def show(data_plan):
     st.warning(f"📅 Loturile de mai jos vor fi lansate pentru data: **{data_afisata}**")
 
     # Stoc curent al zilei
-    stoc = db.get_stoc_zi(data_plan)
+    stoc          = db.get_stoc_zi(data_plan)
+    total_rezervat= db.get_total_rezervat_firme(data_plan)
     if stoc:
         with st.expander("📊 Stoc lansat azi — situație curentă", expanded=False):
-            cols = st.columns([3, 1, 1, 1])
+            if total_rezervat:
+                st.info(f"🏢 **{total_rezervat} porții rezervate** pentru firme cu contract azi")
+
+            cols = st.columns([3, 1, 1, 1, 1])
             cols[0].markdown("**Produs**")
             cols[1].markdown("**Lansat**")
-            cols[2].markdown("**Ambalat**")
-            cols[3].markdown("**Rămas**")
+            cols[2].markdown("**Firme**")
+            cols[3].markdown("**Ambalat**")
+            cols[4].markdown("**Rămas**")
             for nume, s in stoc.items():
-                c0, c1, c2, c3 = st.columns([3, 1, 1, 1])
+                c0, c1, c2, c3, c4 = st.columns([3, 1, 1, 1, 1])
                 c0.write(nume)
                 c1.write(s['lansat'])
-                c2.write(s['ambalat'])
+                c2.caption(f"~{s.get('rezervat', 0)}")
+                c3.write(s['ambalat'])
                 ramas = s['ramas']
                 if ramas <= 0:
-                    c3.markdown(f":red[**{ramas}**]")
+                    c4.markdown(f":red[**{ramas}**]")
                 elif ramas < 5:
-                    c3.markdown(f":orange[**{ramas}**]")
+                    c4.markdown(f":orange[**{ramas}**]")
                 else:
-                    c3.markdown(f":green[**{ramas}**]")
+                    c4.markdown(f":green[**{ramas}**]")
 
     # -------------------------------------------------------
     # PRANZ

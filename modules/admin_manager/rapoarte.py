@@ -3,8 +3,8 @@ admin_manager/rapoarte.py
 --------------------------
 Sectiunea "Monitorizare Comenzi" din pagina Admin.
 Afiseaza:
-  - Rezumat total cantitati (bucatarie)
-  - Rezumat financiar pe sectii (pranz, cina, livrare etc.)
+  - Rezumat total cantitati cu statusuri efective per portie
+  - Rezumat financiar pe sectii cu statusuri efective
   - Lista detaliata a comenzilor cu optiune de stergere
   - Raportare periodica (interval de date)
 
@@ -18,6 +18,78 @@ import utils
 from datetime import date
 
 
+# ------------------------------------------------------------------
+# Statusul efectiv al unei portii = combinatie status linie + comanda
+# ------------------------------------------------------------------
+EFF_STATUSES = [
+    ('in_gatire',  '🔴', 'în gătire',  'red'),
+    ('de_ambalat', '🔵', 'de ambalat', 'blue'),
+    ('ambalat',    '🟡', 'ambalat',    'orange'),
+    ('pe_drum',    '🚀', 'pe drum',    'violet'),
+    ('livrat',     '✅', 'livrat',     'green'),
+]
+
+STATUS_COMANDA_EMOJI = {
+    'nou':      '🔵',
+    'pregatit': '🟡',
+    'pedrum':   '🚀',
+    'livrat':   '✅',
+    'anulat':   '❌',
+}
+
+
+def _eff_key(line_status, order_status):
+    """Returneaza cheia statusului efectiv al unei portii."""
+    if line_status != 'gatit':
+        return 'in_gatire'
+    return {
+        'nou':      'de_ambalat',
+        'pregatit': 'ambalat',
+        'pedrum':   'pe_drum',
+        'livrat':   'livrat',
+    }.get(order_status, 'de_ambalat')
+
+
+def _parse_produse(detalii_raw, order_status, dest):
+    """
+    Parseaza string-ul detalii si adauga portiile in dest.
+    dest: { produs: { eff_key: count } }
+    """
+    for parte in (detalii_raw or '').split(', '):
+        if 'x ' not in parte:
+            continue
+        try:
+            qty_str, rest = parte.split('x ', 1)
+            parts = rest.split('|')
+            produs  = parts[0].strip()
+            line_st = parts[1].strip() if len(parts) > 1 else 'nou'
+            qty     = int(qty_str.strip())
+            eff     = _eff_key(line_st, order_status)
+            if produs not in dest:
+                dest[produs] = {}
+            dest[produs][eff] = dest[produs].get(eff, 0) + qty
+        except Exception:
+            continue
+
+
+def _show_produse_breakdown(produse_dict):
+    """
+    Afiseaza per produs: total + breakdown colorat per status efectiv.
+    produse_dict: { produs: { eff_key: count } }
+    """
+    for produs, by_eff in produse_dict.items():
+        total = sum(by_eff.values())
+        parts = []
+        for eff_key, icon, label, color in EFF_STATUSES:
+            cnt = by_eff.get(eff_key, 0)
+            if cnt > 0:
+                parts.append(f"{icon} :{color}[**{cnt}** {label}]")
+        breakdown = "  ·  ".join(parts)
+        st.markdown(f"**{produs}** — {total} buc  ·  {breakdown}")
+
+
+# ------------------------------------------------------------------
+
 def show(data_plan):
     """Randeaza sectiunea de monitorizare pentru data_plan."""
     st.subheader("📊 Control General Producție & Livrări")
@@ -29,78 +101,71 @@ def show(data_plan):
         st.info("Nicio comandă sau lot de producție găsit pentru această dată.")
     else:
         # -------------------------------------------------------
-        # 1. REZUMAT CANTITATI (pentru bucatarie)
+        # 1. REZUMAT TOTAL CANTITĂȚI (bucatarie)
         # -------------------------------------------------------
         with st.expander("👨‍🍳 REZUMAT TOTAL CANTITĂȚI (Bucătărie)", expanded=False):
-            dict_totaluri = {}
+            produse_total = {}
             for c in toate_comenzile:
-                detalii_raw = c.get('detalii')
-                if not detalii_raw:
-                    continue
-                for parte in detalii_raw.split(', '):
-                    try:
-                        if 'x ' in parte:
-                            qty_str, nume_p = parte.split('x ', 1)
-                            dict_totaluri[nume_p] = dict_totaluri.get(nume_p, 0) + int(qty_str)
-                    except Exception:
-                        continue
+                _parse_produse(c.get('detalii'), c.get('status_comanda', 'nou'), produse_total)
 
-            if dict_totaluri:
-                df_summary = pd.DataFrame([
-                    {"Produs": k, "Total Porții": v}
-                    for k, v in dict_totaluri.items()
-                ])
-                st.table(df_summary)
+            if produse_total:
+                _show_produse_breakdown(produse_total)
+
+                # Nevandut declarat
+                nevandut = db.get_stoc_nevandut(data_plan)
+                if nevandut:
+                    st.divider()
+                    st.markdown("**🍽️ Nevândut declarat:**")
+                    for produs, info in nevandut.items():
+                        st.markdown(
+                            f"**{produs}** — declarat: {info['cantitate']} | "
+                            f"servit: {info['cantitate_servita']} | "
+                            f":orange[disponibil: {info['ramas']}]"
+                        )
             else:
                 st.write("Nu există produse de centralizat.")
 
         # -------------------------------------------------------
-        # 2. REZUMAT FINANCIAR PE SECTII
+        # 2. REZUMAT FINANCIAR PE SECȚII
         # -------------------------------------------------------
         sectii = {}
         total_general = 0
 
         for c in toate_comenzile:
-            tip = str(c.get('tip_comanda', 'ALTELE')).upper().strip()
-            valoare = c.get('total_plata', 0)
+            tip          = str(c.get('tip_comanda', 'ALTELE')).upper().strip()
+            order_status = c.get('status_comanda', 'nou')
+            valoare      = c.get('total_plata', 0)
 
             if tip not in sectii:
-                sectii[tip] = {"produse": {}, "bani": 0}
+                sectii[tip] = {'bani': 0, 'comenzi_st': {}, 'produse': {}}
 
-            sectii[tip]["bani"] += valoare
-            total_general += valoare
+            sectii[tip]['bani'] += valoare
+            total_general       += valoare
+            sectii[tip]['comenzi_st'][order_status] = sectii[tip]['comenzi_st'].get(order_status, 0) + 1
+            _parse_produse(c.get('detalii'), order_status, sectii[tip]['produse'])
 
-            detalii_raw = c.get('detalii')
-            if not detalii_raw:
-                continue
-
-            for parte in detalii_raw.split(', '):
-                if 'x ' in parte:
-                    try:
-                        qty_str, rest = parte.split('x ', 1)
-                        # Eliminam statusul "|gatit" sau "|nou" din nume
-                        nume_p = rest.split('|')[0]
-                        sectii[tip]["produse"][nume_p] = sectii[tip]["produse"].get(nume_p, 0) + int(qty_str)
-                    except Exception:
-                        continue
-
-        # Titlul expanderului contine sumarul financiar
         elemente_titlu = [f"{cat}: {d['bani']:.0f} lei" for cat, d in sectii.items()]
-        titlu_financiar = "💰 Rezumat Zi: " + " | ".join(elemente_titlu) + f"  ——  TOTAL: {total_general:.2f} lei"
+        titlu_financiar = (
+            "💰 Rezumat Zi: " + " | ".join(elemente_titlu) +
+            f"  ——  TOTAL: {total_general:.2f} lei"
+        )
 
         with st.expander(titlu_financiar, expanded=False):
-            for nume_cat, date_cat in sectii.items():
+            for tip, date_tip in sectii.items():
                 with st.container(border=True):
                     c1, c2 = st.columns([3, 1])
-                    c1.markdown(f"#### 📍 {nume_cat}")
-                    c2.metric("Vânzări", f"{date_cat['bani']:.2f} lei")
+                    c1.markdown(f"#### 📍 {tip}")
+                    c2.metric("Vânzări", f"{date_tip['bani']:.2f} lei")
 
-                    if date_cat["produse"]:
-                        df_cat = pd.DataFrame([
-                            {"Produs": k, "Cantitate": v}
-                            for k, v in date_cat["produse"].items()
-                        ])
-                        st.table(df_cat)
+                    # Sumar comenzi per status
+                    comenzi_parts = []
+                    for st_key, cnt in date_tip['comenzi_st'].items():
+                        emoji = STATUS_COMANDA_EMOJI.get(st_key, '❓')
+                        comenzi_parts.append(f"{emoji} {cnt} {st_key}")
+                    st.caption("Comenzi: " + "  |  ".join(comenzi_parts))
+
+                    if date_tip['produse']:
+                        _show_produse_breakdown(date_tip['produse'])
 
         # -------------------------------------------------------
         # 3. LISTA DETALIATA PE COMENZI
@@ -108,11 +173,12 @@ def show(data_plan):
         st.markdown("### 📝 Detalii Comenzi & Status Real-Time")
 
         for cz in toate_comenzile:
-            icon_tip = "🚚" if cz['tip_comanda'] == 'livrare' else "🏢"
-            ora = str(cz['ora_livrare_estimata'])[:5]
-            status_emoji = {'nou': "🔵", 'pregatit': "🟢", 'livrat': "⚪"}.get(cz['status_comanda'], "❓")
+            icon_tip     = "🚚" if cz['tip_comanda'] == 'livrare' else "🏢"
+            ora          = str(cz['ora_livrare_estimata'])[:5]
+            order_status = cz.get('status_comanda', 'nou')
+            st_emoji     = STATUS_COMANDA_EMOJI.get(order_status, '❓')
             titlu = (
-                f"{status_emoji} {cz['status_comanda'].upper()} | "
+                f"{st_emoji} {order_status.upper()} | "
                 f"{ora} | {cz['client']} | {cz.get('total_plata', 0):.2f} lei | {icon_tip}"
             )
 
@@ -124,11 +190,15 @@ def show(data_plan):
                     if cz['detalii']:
                         for linie in cz['detalii'].split(', '):
                             try:
-                                produs_full, stare = linie.split('|')
-                                if stare == 'gatit':
-                                    st.markdown(f"✅ :green[{produs_full}]")
+                                produs_full, line_st = linie.split('|')
+                                eff = _eff_key(line_st.strip(), order_status)
+                                # gasim config-ul pentru acest eff
+                                cfg = next((e for e in EFF_STATUSES if e[0] == eff), None)
+                                if cfg:
+                                    _, icon, label, color = cfg
+                                    st.markdown(f"{icon} :{color}[{produs_full.strip()}] — *{label}*")
                                 else:
-                                    st.markdown(f"⏳ :orange[{produs_full}]")
+                                    st.write(f"• {produs_full.strip()}")
                             except Exception:
                                 st.write(f"• {linie}")
                     else:
@@ -154,7 +224,7 @@ def show(data_plan):
     st.divider()
     st.subheader("📊 Raportare Periodică")
 
-    today = utils.get_ro_time().date()
+    today     = utils.get_ro_time().date()
     first_day = today.replace(day=1)
 
     interval = st.date_input(
@@ -176,12 +246,12 @@ def show(data_plan):
                 st.write(f"### Rezultat: {d_start} → {d_end}")
 
                 total_per_perioada = sum(r['total_valoare'] for r in date_raport)
-                nr_total = sum(r['nr_comenzi'] for r in date_raport)
+                nr_total           = sum(r['nr_comenzi']   for r in date_raport)
 
                 c1, c2 = st.columns(2)
                 c1.metric("Total Încasări (brut)", f"{total_per_perioada:.2f} lei")
                 c2.metric("Număr Total Comenzi", nr_total)
 
-                df_raport = pd.DataFrame(date_raport)
-                df_raport.columns = ['Secția', 'Total Valoare (lei)', 'Nr. Comenzi']
+                df_raport          = pd.DataFrame(date_raport)
+                df_raport.columns  = ['Secția', 'Total Valoare (lei)', 'Nr. Comenzi']
                 st.table(df_raport)
