@@ -543,14 +543,23 @@ def toggle_angajat(angajat_id, activ):
 
 
 def get_angajati_serviti_azi(firma_id, data):
-    """Returneaza set de angajat_id care au fost deja serviti azi."""
+    """
+    Returneaza dict { angajat_id: [produse servite] } pentru firma si data data.
+    """
     engine = get_engine()
     with engine.connect() as conn:
         r = conn.execute(text("""
-            SELECT angajat_id FROM serviri_ghiseu
-            WHERE firma_id = :fid AND data_servire = :data AND angajat_id IS NOT NULL
+            SELECT s.angajat_id,
+                   string_agg(l.cantitate || 'x ' || l.nume_produs ||
+                       CASE WHEN l.din_nevandut THEN ' (nev.)' ELSE '' END,
+                       ', ' ORDER BY l.id) AS ce_a_primit
+            FROM serviri_ghiseu s
+            JOIN serviri_ghiseu_linii l ON l.servire_id = s.id
+            WHERE s.firma_id = :fid AND s.data_servire = :data
+              AND s.angajat_id IS NOT NULL
+            GROUP BY s.angajat_id
         """), {"fid": firma_id, "data": data})
-        return {row[0] for row in r}
+        return {row[0]: row[1] for row in r}
 
 
 def save_servire(data, tip_servire, produse, firma_id=None, angajat_id=None, comanda_ref_id=None):

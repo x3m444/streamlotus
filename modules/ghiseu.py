@@ -181,109 +181,140 @@ def _render_firme(data_azi):
         st.info("⏳ Bucătăria nu a marcat încă niciun produs ca gătit. Reîncarcă pagina când mâncarea e gata.")
         return
 
-    firma_sel = st.selectbox(
-        "Selectează firma:",
-        firme,
-        format_func=lambda x: x['nume_firma'],
-        key="firma_selectata"
-    )
+    # Meniu zilei
+    plan_zi      = db.get_meniu_planificat(data_azi)
+    stoc         = db.get_stoc_zi(data_azi)
+    nevandut     = db.get_stoc_nevandut(data_azi)
+    lista_f1     = [p for p in plan_zi if p["categorie"] == "felul_1"]
+    lista_f2     = [p for p in plan_zi if p["categorie"] == "felul_2"]
+    lista_salate = [p for p in plan_zi if p["categorie"] == "salate"]
 
-    if not firma_sel:
+    f1     = lista_f1[0]     if lista_f1           else None
+    f2v1   = lista_f2[0]     if len(lista_f2) >= 1 else None
+    f2v2   = lista_f2[1]     if len(lista_f2) >= 2 else None
+    salata = lista_salate[0] if lista_salate        else None
+
+    def componente_disponibile(componente):
+        return all(
+            p and p["nume"] in gatite and stoc.get(p["nume"], {}).get("ramas", 0) > 0
+            for p in componente
+        )
+
+    # Optiunile de meniu disponibile
+    optiuni_meniu = {}
+    if f1 and f2v1:
+        comps_v1 = [p for p in [f1, f2v1, salata] if p]
+        if componente_disponibile(comps_v1):
+            optiuni_meniu["Meniu Complet V1"] = comps_v1
+    if f1 and f2v2:
+        comps_v2 = [p for p in [f1, f2v2, salata] if p]
+        if componente_disponibile(comps_v2):
+            optiuni_meniu["Meniu Complet V2"] = comps_v2
+    if f1 and f1["nume"] in gatite and stoc.get(f1["nume"], {}).get("ramas", 0) > 0:
+        optiuni_meniu[f"Solo {f1["nume"]}"] = [f1]
+    if f2v1 and f2v1["nume"] in gatite and stoc.get(f2v1["nume"], {}).get("ramas", 0) > 0:
+        optiuni_meniu[f"Solo {f2v1["nume"]}"] = [f2v1]
+    if f2v2 and f2v2["nume"] in gatite and stoc.get(f2v2["nume"], {}).get("ramas", 0) > 0:
+        optiuni_meniu[f"Solo {f2v2["nume"]}"] = [f2v2]
+
+    optiuni_nevandut = {k: v for k, v in nevandut.items() if v["ramas"] > 0}
+
+    if not optiuni_meniu and not optiuni_nevandut:
+        st.warning("Nu există meniu disponibil pentru servire (stoc epuizat sau negatit).")
         return
 
-    firma_id = firma_sel['id']
-    nevandut = db.get_stoc_nevandut(data_azi)
-    are_nevandut = any(v['ramas'] > 0 for v in nevandut.values())
-    serviti_azi = db.get_angajati_serviti_azi(firma_id, data_azi)
+    # Fiecare firma = un expander
+    for firma in firme:
+        firma_id     = firma["id"]
+        toti         = db.get_angajati_firma(firma_id, doar_activi=False)
+        activi       = [a for a in toti if a["activ"]]
+        inactivi     = [a for a in toti if not a["activ"]]
+        serviti_azi  = db.get_angajati_serviti_azi(firma_id, data_azi)
+        nr_serviti   = len(serviti_azi)
 
-    st.divider()
+        titlu = f"🏢 {firma["nume_firma"]}  —  {nr_serviti}/{len(activi)} serviți"
 
-    # Adaugă angajat nou — inline, fără a ieși din ecran
-    with st.expander("➕ Angajat nou"):
-        col_n, col_btn = st.columns([3, 1])
-        nou_nume = col_n.text_input("Nume angajat:", key="nou_angajat_nume", label_visibility="collapsed", placeholder="Nume și prenume")
-        with col_btn:
-            st.write("")
-            if st.button("Adaugă", key="btn_add_angajat", use_container_width=True):
-                if nou_nume.strip():
-                    db.add_angajat(firma_id, nou_nume.strip())
-                    st.success(f"Adăugat: {nou_nume.strip()}")
+        with st.expander(titlu, expanded=(nr_serviti < len(activi))):
+
+            # Adauga angajat nou direct din ghiseu
+            col_inp, col_btn = st.columns([4, 1])
+            nou = col_inp.text_input(
+                "Angajat nou:", key=f"new_ang_gh_{firma_id}",
+                placeholder="Nume și prenume", label_visibility="collapsed"
+            )
+            if col_btn.button("➕", key=f"add_ang_gh_{firma_id}", use_container_width=True):
+                if nou.strip():
+                    db.add_angajat(firma_id, nou.strip())
                     st.rerun()
 
-    # Lista angajaților (toți — activi + inactivi pentru management)
-    toti_angajatii = db.get_angajati_firma(firma_id, doar_activi=False)
+            st.divider()
 
-    if not toti_angajatii:
-        st.info("Firma nu are angajați înregistrați. Adaugă mai sus.")
-        return
+            for ang in activi:
+                aid          = ang["id"]
+                ce_a_primit  = serviti_azi.get(aid)  # None = neservit, string = ce a primit
 
-    activi = [a for a in toti_angajatii if a['activ']]
-    inactivi = [a for a in toti_angajatii if not a['activ']]
-
-    st.markdown(f"**Angajați activi ({len(activi)})** — bifează cine a mâncat:")
-
-    for ang in activi:
-        aid = ang['id']
-        deja_servit = aid in serviti_azi
-
-        with st.container(border=True):
-            col_nume, col_nev, col_serv, col_dezact = st.columns([3, 2, 1.5, 1.5])
-
-            with col_nume:
-                if deja_servit:
-                    st.markdown(f"✅ ~~{ang['nume_angajat']}~~")
-                    st.caption("Servit azi")
+                if ce_a_primit:
+                    # Angajat deja servit
+                    c1, c2 = st.columns([3, 4])
+                    c1.markdown(f"✅ ~~{ang["nume_angajat"]}~~")
+                    c2.caption(ce_a_primit)
                 else:
-                    st.write(f"👤 {ang['nume_angajat']}")
+                    # Angajat neservit — selectoare + buton Servit
+                    with st.container(border=True):
+                        st.write(f"👤 **{ang["nume_angajat"]}**")
+                        col_meniu, col_nev, col_btn_serv, col_concediu = st.columns([2.5, 2.5, 1.2, 1.2])
 
-            with col_nev:
-                if are_nevandut and not deja_servit:
-                    optiuni_nev = {
-                        f"{k} ({v['ramas']} porții)": k
-                        for k, v in nevandut.items() if v['ramas'] > 0
-                    }
-                    nev_ales = st.selectbox(
-                        "Oferă nevândut:",
-                        ["— fără —"] + list(optiuni_nev.keys()),
-                        key=f"nev_sel_{aid}",
-                        label_visibility="collapsed"
-                    )
-                elif deja_servit:
-                    st.write("")
-                else:
-                    st.caption("Fără nevândute")
+                        with col_meniu:
+                            optiuni_lista = list(optiuni_meniu.keys())
+                            meniu_ales = st.selectbox(
+                                "Meniu:",
+                                optiuni_lista if optiuni_lista else ["— indisponibil —"],
+                                key=f"meniu_{aid}",
+                                label_visibility="collapsed"
+                            )
 
-            with col_serv:
-                if not deja_servit:
-                    if st.button("✅ Servit", key=f"serv_{aid}", use_container_width=True, type="primary"):
-                        produse = [{"nume_produs": "Meniu firmă", "cantitate": 1, "din_nevandut": False}]
-                        # Adauga nevandut daca a fost ales
-                        nev_sel_val = st.session_state.get(f"nev_sel_{aid}", "— fără —")
-                        if nev_sel_val != "— fără —" and are_nevandut:
-                            nume_nev = optiuni_nev.get(nev_sel_val)
-                            if nume_nev:
-                                produse.append({"nume_produs": nume_nev, "cantitate": 1, "din_nevandut": True})
-                        db.save_servire(data_azi, 'firma', produse, firma_id=firma_id, angajat_id=aid)
-                        st.rerun()
+                        with col_nev:
+                            if optiuni_nevandut:
+                                nev_ales = st.selectbox(
+                                    "+ Nevândut:",
+                                    ["— fără nevândut —"] + list(optiuni_nevandut.keys()),
+                                    key=f"nev_{aid}",
+                                    label_visibility="collapsed"
+                                )
+                            else:
+                                nev_ales = "— fără nevândut —"
+                                st.caption("Fără nevândute")
 
-            with col_dezact:
-                if st.button("🔴 Concediu", key=f"dezact_{aid}", use_container_width=True):
-                    db.toggle_angajat(aid, False)
-                    st.rerun()
+                        with col_btn_serv:
+                            if optiuni_lista and st.button(
+                                "✅ Servit", key=f"serv_{aid}",
+                                use_container_width=True, type="primary"
+                            ):
+                                produse = [
+                                    {"nume_produs": p["nume"], "cantitate": 1, "din_nevandut": False}
+                                    for p in optiuni_meniu[meniu_ales]
+                                ]
+                                if nev_ales != "— fără nevândut —" and nev_ales in optiuni_nevandut:
+                                    produse.append({
+                                        "nume_produs": nev_ales, "cantitate": 1, "din_nevandut": True
+                                    })
+                                db.save_servire(data_azi, "firma", produse, firma_id=firma_id, angajat_id=aid)
+                                st.rerun()
 
-    # Angajați inactivi
-    if inactivi:
-        with st.expander(f"Inactivi / Concediu ({len(inactivi)})"):
-            for ang in inactivi:
-                col_n, col_act = st.columns([4, 1])
-                col_n.write(f"💤 {ang['nume_angajat']}")
-                if col_act.button("🟢 Reactivează", key=f"act_{ang['id']}", use_container_width=True):
-                    db.toggle_angajat(ang['id'], True)
-                    st.rerun()
+                        with col_concediu:
+                            if st.button("🔴", key=f"conc_{aid}", use_container_width=True, help="Marchează concediu"):
+                                db.toggle_angajat(aid, False)
+                                st.rerun()
 
-    # Sumar serviri azi pentru firma
-    st.divider()
-    st.caption(f"Serviți azi din {firma_sel['nume_firma']}: {len(serviti_azi)} / {len(activi)} angajați activi")
+            # Inactivi
+            if inactivi:
+                with st.expander(f"💤 Inactivi / Concediu ({len(inactivi)})"):
+                    for ang in inactivi:
+                        ca, cb = st.columns([5, 1])
+                        ca.write(f"💤 {ang["nume_angajat"]}")
+                        if cb.button("🟢", key=f"act_{ang["id"]}", use_container_width=True, help="Reactivează"):
+                            db.toggle_angajat(ang["id"], True)
+                            st.rerun()
 
 
 # ----------------------------------------------------------
