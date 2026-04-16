@@ -465,6 +465,52 @@ def get_stoc_zi(data):
 
 
 # =============================================================
+# NEVANDUT
+# =============================================================
+
+def get_stoc_nevandut(data):
+    """Stocul declarat nevandut pentru o zi. { nume_produs: {cantitate, cantitate_servita, ramas} }"""
+    engine = get_engine()
+    with engine.connect() as conn:
+        r = conn.execute(text("""
+            SELECT nume_produs, cantitate, cantitate_servita
+            FROM stoc_nevandut WHERE data = :data
+        """), {"data": data})
+        return {
+            row[0]: {
+                "cantitate": row[1],
+                "cantitate_servita": row[2],
+                "ramas": row[1] - row[2]
+            }
+            for row in r
+        }
+
+
+def declara_nevandut(data, nume_produs, cantitate):
+    """
+    Inregistreaza sau actualizeaza stocul nevandut pentru un produs.
+    Foloseste UPSERT — daca produsul exista, suprascrie cantitatea.
+    """
+    engine = get_engine()
+    with engine.begin() as conn:
+        conn.execute(text("""
+            INSERT INTO stoc_nevandut (data, nume_produs, cantitate, cantitate_servita)
+            VALUES (:data, :nume, :qty, 0)
+            ON CONFLICT (data, nume_produs)
+            DO UPDATE SET cantitate = :qty, declarat_la = NOW()
+        """), {"data": data, "nume": nume_produs, "qty": cantitate})
+
+
+def sterge_nevandut(data, nume_produs):
+    """Sterge declaratia de nevandut pentru un produs (corectie)."""
+    engine = get_engine()
+    with engine.begin() as conn:
+        conn.execute(text("""
+            DELETE FROM stoc_nevandut WHERE data = :data AND nume_produs = :nume
+        """), {"data": data, "nume": nume_produs})
+
+
+# =============================================================
 # STERGERI
 # =============================================================
 
