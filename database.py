@@ -562,18 +562,77 @@ def get_angajati_serviti_azi(firma_id, data):
         return {row[0]: row[1] for row in r}
 
 
-def save_servire(data, tip_servire, produse, firma_id=None, angajat_id=None, comanda_ref_id=None):
+def get_pachete_firma_azi(data):
+    """
+    Returneaza pachetele de ambalat/ambalate grupate pe firma.
+    Folosit de Bucatarie pentru a sti ce sa ambaleze.
+    Returneaza: [ { firma_id, nume_firma, servire_id, angajat, produse, status_pachet } ]
+    """
+    engine = get_engine()
+    with engine.connect() as conn:
+        r = conn.execute(text("""
+            SELECT s.id AS servire_id,
+                   s.firma_id,
+                   f.nume_firma,
+                   a.nume_angajat,
+                   s.status_pachet,
+                   string_agg(l.cantitate || 'x ' || l.nume_produs, ', ' ORDER BY l.id) AS produse
+            FROM serviri_ghiseu s
+            JOIN firme f ON s.firma_id = f.id
+            LEFT JOIN angajati_firme a ON s.angajat_id = a.id
+            JOIN serviri_ghiseu_linii l ON l.servire_id = s.id
+            WHERE s.data_servire = :data
+              AND s.tip_ridicare = 'pachet'
+              AND s.status_pachet IN ('astept', 'ambalat')
+            GROUP BY s.id, s.firma_id, f.nume_firma, a.nume_angajat, s.status_pachet
+            ORDER BY f.nume_firma, s.id
+        """), {"data": data})
+        return [dict(r._mapping) for r in r]
+
+
+def update_status_pachet(servire_id, noul_status):
+    """Actualizeaza statusul unui pachet: astept → ambalat → ridicat."""
+    engine = get_engine()
+    with engine.begin() as conn:
+        conn.execute(text("""
+            UPDATE serviri_ghiseu SET status_pachet = :s WHERE id = :id
+        """), {"s": noul_status, "id": servire_id})
+
+
+def get_pachete_angajat_azi(firma_id, data):
+    """
+    Returneaza statusul pachetelor per angajat pentru o firma si zi.
+    { angajat_id: { servire_id, status_pachet, produse } }
+    """
+    engine = get_engine()
+    with engine.connect() as conn:
+        r = conn.execute(text("""
+            SELECT s.angajat_id, s.id AS servire_id, s.status_pachet,
+                   string_agg(l.cantitate || 'x ' || l.nume_produs, ', ' ORDER BY l.id) AS produse
+            FROM serviri_ghiseu s
+            JOIN serviri_ghiseu_linii l ON l.servire_id = s.id
+            WHERE s.firma_id = :fid AND s.data_servire = :data
+              AND s.tip_ridicare = 'pachet'
+            GROUP BY s.angajat_id, s.id, s.status_pachet
+        """), {"fid": firma_id, "data": data})
+        return {row[0]: {"servire_id": row[1], "status_pachet": row[2], "produse": row[3]} for row in r}
+
+
+def save_servire(data, tip_servire, produse, firma_id=None, angajat_id=None, comanda_ref_id=None, tip_ridicare='la_masa'):
     """
     Salveaza o servire la ghiseu.
     produse: [{ 'nume_produs': str, 'cantitate': int, 'din_nevandut': bool }]
     """
     engine = get_engine()
     with engine.begin() as conn:
+        status_pachet = 'astept' if tip_ridicare == 'pachet' else None
         r = conn.execute(text("""
-            INSERT INTO serviri_ghiseu (data_servire, tip_servire, firma_id, angajat_id, comanda_ref_id)
-            VALUES (:data, :tip, :fid, :aid, :cid)
+            INSERT INTO serviri_ghiseu
+              (data_servire, tip_servire, firma_id, angajat_id, comanda_ref_id, tip_ridicare, status_pachet)
+            VALUES (:data, :tip, :fid, :aid, :cid, :ridicare, :status_p)
             RETURNING id
-        """), {"data": data, "tip": tip_servire, "fid": firma_id, "aid": angajat_id, "cid": comanda_ref_id})
+        """), {"data": data, "tip": tip_servire, "fid": firma_id, "aid": angajat_id,
+               "cid": comanda_ref_id, "ridicare": tip_ridicare, "status_p": status_pachet})
         servire_id = r.fetchone()[0]
 
         for p in produse:
