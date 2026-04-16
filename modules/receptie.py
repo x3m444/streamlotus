@@ -187,22 +187,22 @@ def show_receptie():
         
         if st.button("➕ Adaugă Solo V1", key="btn_s1_rapide"):
             if f1_s > 0:
-                adauga_in_buffer(f"{nume_f1} (Solo)", f1_s, pret_f1, "Solo")
+                adauga_in_buffer(nume_f1, f1_s, pret_f1, "Solo")
             if f2_v1 > 0:
-                adauga_in_buffer(f"{nume_f2_v1} (Solo)", f2_v1, pret_f2_v1, "Solo")
-                if lista_salate_plan: # Adaugă salata dacă e planificată, indiferent de preț
-                    adauga_in_buffer(nume_salata, f2_v1, pret_salata, "Solo (S)")
+                adauga_in_buffer(nume_f2_v1, f2_v1, pret_f2_v1, "Solo")
+                if lista_salate_plan:
+                    adauga_in_buffer(nume_salata, f2_v1, pret_salata, "Solo")
             st.rerun()
 
     with col3:
         st.success("Opțiuni V2")
         f2_v2 = st.number_input(f"Doar {nume_f2_v2}", min_value=0, step=1, key="rapid_f2v2")
-        
+
         if st.button("➕ Adaugă Solo V2", key="btn_s2_rapide"):
             if f2_v2 > 0:
-                adauga_in_buffer(f"{nume_f2_v2} (Solo)", f2_v2, pret_f2_v2, "Solo")
+                adauga_in_buffer(nume_f2_v2, f2_v2, pret_f2_v2, "Solo")
                 if lista_salate_plan:
-                    adauga_in_buffer(nume_salata, f2_v2, pret_salata, "Solo (S)")
+                    adauga_in_buffer(nume_salata, f2_v2, pret_salata, "Solo")
             st.rerun()
 
     st.divider()

@@ -18,7 +18,7 @@ Vede DOAR comenzile asignate lui, cu status 'pregatit' sau 'pedrum'.
 
 import streamlit as st
 import database as db
-from datetime import date
+import utils
 
 
 engine = db.get_engine()
@@ -29,7 +29,7 @@ def show_livrare(sofer):
     Randeaza ecranul livratorului pentru soferul dat.
     sofer: numele soferului selectat din sidebar
     """
-    data_azi = date.today()
+    data_azi = utils.get_ro_time().date()
 
     st.title(f"🚚 Ruta mea — {sofer}")
     st.caption(f"Data: {data_azi.strftime('%d.%m.%Y')}")
