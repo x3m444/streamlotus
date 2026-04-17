@@ -28,6 +28,24 @@ def show(data_azi):
         st.warning("Nu există meniu planificat pentru astăzi.")
         return
 
+    if 'bon_buffer' not in st.session_state:
+        st.session_state.bon_buffer = []
+
+    def adauga_grup(label, componente, din_nevandut=False, din_buffer=False, tip_meniu=None):
+        """Adauga un grup in bon — daca exista deja acelasi label, creste cantitatea."""
+        for item in st.session_state.bon_buffer:
+            if item['label'] == label:
+                item['cantitate'] = item.get('cantitate', 1) + 1
+                return
+        st.session_state.bon_buffer.append({
+            "label": label,
+            "cantitate": 1,
+            "produse": [{"nume_produs": p['nume'], "cantitate": 1,
+                         "din_nevandut": din_nevandut} for p in componente],
+            "din_buffer": din_buffer,
+            "tip_meniu": tip_meniu,
+        })
+
     # -------------------------------------------------------
     # SECTIUNEA BUFFER — portii pre-ambalate de bucatarie
     # -------------------------------------------------------
@@ -59,24 +77,6 @@ def show(data_azi):
     if not gatite:
         st.info("⏳ Bucătăria nu a marcat încă niciun produs ca gătit. Reîncarcă pagina când mâncarea e gata.")
         return
-
-    if 'bon_buffer' not in st.session_state:
-        st.session_state.bon_buffer = []
-
-    def adauga_grup(label, componente, din_nevandut=False, din_buffer=False, tip_meniu=None):
-        """Adauga un grup in bon — daca exista deja acelasi label, creste cantitatea."""
-        for item in st.session_state.bon_buffer:
-            if item['label'] == label:
-                item['cantitate'] = item.get('cantitate', 1) + 1
-                return
-        st.session_state.bon_buffer.append({
-            "label": label,
-            "cantitate": 1,
-            "produse": [{"nume_produs": p['nume'], "cantitate": 1,
-                         "din_nevandut": din_nevandut} for p in componente],
-            "din_buffer": din_buffer,
-            "tip_meniu": tip_meniu,
-        })
 
     def buton_produs(produs, key, icon="🍽️"):
         nume = produs['nume']
