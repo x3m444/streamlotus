@@ -1,6 +1,8 @@
 import streamlit as st
 import database as db
 import auth
+
+AUTH_ENABLED = False  # Setează True pentru a activa autentificarea
 from modules import frontend, livrare
 from modules.admin_manager import main as admin_main
 from modules.bucatarie import main as bucatarie_main
@@ -28,11 +30,14 @@ if pagina == "🏠 Acasă (Public)":
 
 else:
     # ── Autentificare ─────────────────────────────────────────
-    user = auth.check_auth()
-
-    if not user:
-        auth.login_page()
-        st.stop()
+    if AUTH_ENABLED:
+        user = auth.check_auth()
+        if not user:
+            auth.login_page()
+            st.stop()
+    else:
+        user = {"username": "admin", "rol": "admin",
+                "livrator_id": None, "livrator_nume": None}
 
     rol = user["rol"]
 
