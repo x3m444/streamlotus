@@ -66,26 +66,21 @@ def show(data_azi):
     if 'bon_buffer' not in st.session_state:
         st.session_state.bon_buffer = []
 
-    def adauga_bon(nume, qty=1, din_nevandut=False):
-        for item in st.session_state.bon_buffer:
-            if item['nume_produs'] == nume and item['din_nevandut'] == din_nevandut:
-                item['cantitate'] += qty
-                return
+    def adauga_grup(label, componente, din_nevandut=False):
+        """Adauga un grup (meniu sau portie solo) ca un singur item in bon."""
         st.session_state.bon_buffer.append({
-            "nume_produs": nume,
-            "cantitate": qty,
-            "din_nevandut": din_nevandut
+            "label": label,
+            "produse": [{"nume_produs": p['nume'], "cantitate": 1,
+                         "din_nevandut": din_nevandut} for p in componente]
         })
 
     def buton_produs(produs, key, icon="🍽️"):
         nume = produs['nume']
-        este_gatit = nume in gatite
-        ramas = stoc.get(nume, {}).get('ramas', 0)
-        disponibil = este_gatit and ramas > 0
-
-        label = f"{icon} {nume}\n({'gata' if disponibil else ('⏳ negatit' if not este_gatit else '❌ stoc epuizat')})"
-        if st.button(label, key=key, use_container_width=True, disabled=not disponibil):
-            adauga_bon(nume)
+        disponibil = nume in gatite and stoc.get(nume, {}).get('ramas', 0) > 0
+        stare = 'gata' if disponibil else ('⏳ negatit' if nume not in gatite else '❌ epuizat')
+        if st.button(f"{icon} {nume}\n({stare})", key=key,
+                     use_container_width=True, disabled=not disponibil):
+            adauga_grup(f"{icon} {nume}", [produs])
             st.rerun()
 
     f1    = lista_f1[0]    if lista_f1           else None
@@ -94,7 +89,8 @@ def show(data_azi):
     salata = lista_salate[0] if lista_salate      else None
 
     def meniu_disponibil(componente):
-        return all(p['nume'] in gatite and stoc.get(p['nume'], {}).get('ramas', 0) > 0 for p in componente if p)
+        return all(p['nume'] in gatite and stoc.get(p['nume'], {}).get('ramas', 0) > 0
+                   for p in componente if p)
 
     # --- Meniuri complete
     st.markdown("**🍱 Meniu complet:**")
@@ -103,23 +99,19 @@ def show(data_azi):
     with col_v1:
         componente_v1 = [p for p in [f1, f2v1, salata] if p]
         disponibil_v1 = meniu_disponibil(componente_v1)
-        if st.button(
-            " + ".join(p['nume'] for p in componente_v1),
-            key="bon_meniu_v1", use_container_width=True, disabled=not disponibil_v1
-        ):
-            for p in componente_v1:
-                adauga_bon(p['nume'])
+        label_v1 = " + ".join(p['nume'] for p in componente_v1)
+        if st.button(label_v1, key="bon_meniu_v1",
+                     use_container_width=True, disabled=not disponibil_v1):
+            adauga_grup(f"🍱 {label_v1}", componente_v1)
             st.rerun()
 
     with col_v2:
         componente_v2 = [p for p in [f1, f2v2, salata] if p]
         disponibil_v2 = meniu_disponibil(componente_v2)
-        if st.button(
-            " + ".join(p['nume'] for p in componente_v2),
-            key="bon_meniu_v2", use_container_width=True, disabled=not disponibil_v2
-        ):
-            for p in componente_v2:
-                adauga_bon(p['nume'])
+        label_v2 = " + ".join(p['nume'] for p in componente_v2)
+        if st.button(label_v2, key="bon_meniu_v2",
+                     use_container_width=True, disabled=not disponibil_v2):
+            adauga_grup(f"🍱 {label_v2}", componente_v2)
             st.rerun()
 
     # --- Portii solo
@@ -136,21 +128,21 @@ def show(data_azi):
             if produs:
                 buton_produs(produs, key=key, icon=icon)
 
-    # --- Bon curent
+    # --- Bon curent — un buton per grup, apesi ca sa stergi
     if st.session_state.bon_buffer:
         st.divider()
         st.markdown("**Bon curent:**")
-        for i, item in enumerate(st.session_state.bon_buffer):
-            prefix = '🔄 ' if item['din_nevandut'] else ''
-            if st.button(f"🗑️ {prefix}{item['nume_produs']} — x{item['cantitate']}",
-                         key=f"del_bon_{i}", use_container_width=True):
+        for i, grup in enumerate(st.session_state.bon_buffer):
+            if st.button(f"🗑️ {grup['label']}", key=f"del_bon_{i}",
+                         use_container_width=True):
                 st.session_state.bon_buffer.pop(i)
                 st.rerun()
 
         col_conf, col_clear = st.columns(2)
         with col_conf:
             if st.button("✅ Confirmă Servirea", type="primary", use_container_width=True):
-                db.save_servire(data_azi, 'bon_casa', st.session_state.bon_buffer)
+                toate_produsele = [p for g in st.session_state.bon_buffer for p in g['produse']]
+                db.save_servire(data_azi, 'bon_casa', toate_produsele)
                 st.session_state.bon_buffer = []
                 st.success("Servit!")
                 st.rerun()
