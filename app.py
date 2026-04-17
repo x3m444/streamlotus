@@ -1,5 +1,6 @@
 import streamlit as st
 import database as db
+import auth
 from modules import frontend, livrare
 from modules.admin_manager import main as admin_main
 from modules.bucatarie import main as bucatarie_main
@@ -12,19 +13,9 @@ st.set_page_config(page_title="Cantina Lotus", layout="wide", page_icon="🍱")
 st.markdown("""
 <style>
 @media (max-width: 768px) {
-    /* Butoane mai mari pentru touch */
-    .stButton > button {
-        min-height: 52px !important;
-        font-size: 16px !important;
-    }
-    /* Input-uri mai mari — previne zoom automat iOS */
-    input, select, textarea {
-        font-size: 16px !important;
-    }
-    /* Taburi scroll orizontal */
-    [data-testid="stTabs"] {
-        overflow-x: auto !important;
-    }
+    .stButton > button { min-height: 52px !important; font-size: 16px !important; }
+    input, select, textarea { font-size: 16px !important; }
+    [data-testid="stTabs"] { overflow-x: auto !important; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -36,20 +27,29 @@ if pagina == "🏠 Acasă (Public)":
     frontend.show_landing_page()
 
 else:
-    if 'rol' not in st.session_state:
-        st.session_state['rol'] = "Admin"
+    # ── Autentificare ─────────────────────────────────────────
+    user = auth.check_auth()
 
-    rol = st.sidebar.selectbox("Rol (Test):", ["Admin", "Recepție", "Bucătărie", "Ghișeu", "Livrator"])
-    st.session_state['rol'] = rol
+    if not user:
+        auth.login_page()
+        st.stop()
+
+    rol = user["rol"]
+
+    # ── Sidebar utilizator autentificat ───────────────────────
+    st.sidebar.markdown(f"**{user['username']}** — {auth.ROL_LABEL.get(rol, rol)}")
+    if st.sidebar.button("🚪 Deconectare", use_container_width=True):
+        auth.logout()
 
     if st.sidebar.button("📖 Manual", use_container_width=True):
-        st.session_state['show_manual'] = not st.session_state.get('show_manual', False)
+        st.session_state["show_manual"] = not st.session_state.get("show_manual", False)
 
-    if st.session_state.get('show_manual', False):
+    if st.session_state.get("show_manual", False):
         manual.show_manual()
         st.stop()
 
-    if rol == "Admin":
+    # ── Routing pe rol ────────────────────────────────────────
+    if rol == "admin":
         t1, t2, t3, t4 = st.tabs(["⚙️ Admin", "📝 Recepție", "👨‍🍳 Bucătărie", "🚚 Livrare"])
         with t1: admin_main.show_admin()
         with t2: receptie_main.show_receptie()
@@ -60,21 +60,20 @@ else:
                 sofer_admin = st.selectbox("Vizualizează ruta livratorului:", livratori, key="sofer_admin_view")
                 livrare.show_livrare(sofer_admin)
             else:
-                st.warning("Nu există livratori configurați în baza de date.")
+                st.warning("Nu există livratori configurați.")
 
-    elif rol == "Recepție":
+    elif rol == "receptie":
         receptie_main.main_receptie_page()
 
-    elif rol == "Bucătărie":
+    elif rol == "bucatarie":
         bucatarie_main.show_bucatarie()
 
-    elif rol == "Ghișeu":
+    elif rol == "ghiseu":
         ghiseu_main.show_ghiseu()
 
-    elif rol == "Livrator":
-        livratori = db.get_lista_livratori()
-        if livratori:
-            sofer = st.sidebar.selectbox("Selectează livratorul:", livratori, key="sofer_selectat")
+    elif rol == "livrator":
+        sofer = user.get("livrator_nume")
+        if sofer:
             livrare.show_livrare(sofer)
         else:
-            st.warning("Nu există livratori configurați în baza de date.")
+            st.warning("Contul tău nu este legat de un livrator. Contactează adminul.")

@@ -3,3 +3,5 @@ psycopg2-binary
 pandas
 sqlalchemy
 xlsxwriter
+bcrypt
+extra-streamlit-components
