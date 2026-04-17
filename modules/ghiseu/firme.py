@@ -59,9 +59,13 @@ def show(data_azi):
     if f1 and f1["nume"] in gatite and stoc.get(f1["nume"], {}).get("ramas", 0) > 0:
         optiuni_meniu[f"Solo {f1['nume']}"] = {"componente": [f1], "tip_meniu": "solo_f1"}
     if f2v1 and f2v1["nume"] in gatite and stoc.get(f2v1["nume"], {}).get("ramas", 0) > 0:
-        optiuni_meniu[f"Solo {f2v1['nume']}"] = {"componente": [f2v1], "tip_meniu": "solo_f2v1"}
+        comps_solo_f2v1 = [p for p in [f2v1, salata] if p]
+        label_solo_f2v1 = " + ".join(p["nume"] for p in comps_solo_f2v1)
+        optiuni_meniu[label_solo_f2v1] = {"componente": comps_solo_f2v1, "tip_meniu": "solo_f2v1"}
     if f2v2 and f2v2["nume"] in gatite and stoc.get(f2v2["nume"], {}).get("ramas", 0) > 0:
-        optiuni_meniu[f"Solo {f2v2['nume']}"] = {"componente": [f2v2], "tip_meniu": "solo_f2v2"}
+        comps_solo_f2v2 = [p for p in [f2v2, salata] if p]
+        label_solo_f2v2 = " + ".join(p["nume"] for p in comps_solo_f2v2)
+        optiuni_meniu[label_solo_f2v2] = {"componente": comps_solo_f2v2, "tip_meniu": "solo_f2v2"}
 
     optiuni_nevandut = {k: v for k, v in nevandut.items() if v["ramas"] > 0}
 
