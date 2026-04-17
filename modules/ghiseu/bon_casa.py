@@ -120,17 +120,26 @@ def show(data_azi):
 
     # --- Portii solo
     st.markdown("**🍽️ Porție solo:**")
-    cols_solo = st.columns(4)
-    produse_solo = [
-        (f1,    "🥣", "bon_f1"),
-        (f2v1,  "🍖", "bon_f2v1"),
-        (f2v2,  "🍖", "bon_f2v2"),
-        (salata,"🥗", "bon_salata"),
-    ]
-    for col, (produs, icon, key) in zip(cols_solo, produse_solo):
+    solo_optiuni = [(f1, [f1], "🥣", "bon_f1")]
+    if f2v1:
+        solo_optiuni.append((f2v1, [p for p in [f2v1, salata] if p], "🍖", "bon_f2v1"))
+    if f2v2:
+        solo_optiuni.append((f2v2, [p for p in [f2v2, salata] if p], "🍖", "bon_f2v2"))
+
+    cols_solo = st.columns(len(solo_optiuni))
+    for col, (produs_ref, componente, icon, key) in zip(cols_solo, solo_optiuni):
         with col:
-            if produs:
-                buton_produs(produs, key=key, icon=icon)
+            if produs_ref:
+                disponibil = all(
+                    p['nume'] in gatite and stoc.get(p['nume'], {}).get('ramas', 0) > 0
+                    for p in componente
+                )
+                label_solo = " + ".join(p['nume'] for p in componente)
+                stare = 'gata' if disponibil else ('⏳ negatit' if produs_ref['nume'] not in gatite else '❌ epuizat')
+                if st.button(f"{icon} {label_solo}\n({stare})", key=key,
+                             use_container_width=True, disabled=not disponibil):
+                    adauga_grup(f"{icon} {label_solo}", componente)
+                    st.rerun()
 
     # --- Bon curent — un buton per grup, apesi ca sa stergi
     if st.session_state.bon_buffer:
