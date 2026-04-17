@@ -248,6 +248,7 @@ def get_rezumat_zi(data_filtrare=None, tip_comanda=None, status_filtru=None):
         query = """
             SELECT
                 c.id,
+                c.client_id,
                 c.status            AS status_comanda,
                 c.sofer,
                 cl.nume_client      AS client,
@@ -274,10 +275,10 @@ def get_rezumat_zi(data_filtrare=None, tip_comanda=None, status_filtru=None):
 
         query += """
             GROUP BY
-                c.id, c.status, c.sofer, cl.nume_client, cl.telefon,
+                c.id, c.client_id, c.status, c.sofer, cl.nume_client, cl.telefon,
                 cl.adresa_principala, c.metoda_plata, c.tip_comanda,
                 c.total_plata, c.ora_livrare_estimata
-            ORDER BY c.ora_livrare_estimata
+            ORDER BY (c.client_id = 999) DESC, c.ora_livrare_estimata
         """
         return [dict(r._mapping) for r in conn.execute(text(query), params)]
 
@@ -493,8 +494,9 @@ def get_stoc_zi(data):
             ambalat[prod['nume']] = ambalat.get(prod['nume'], 0) + buf_info['cantitate']
 
     total_rezervat = get_total_rezervat_firme(data)
-    nr_produse = max(len(lansat), 1)
-    # Distribuim rezervarea uniform pe produse (informativ, fara blocare dura)
+    nr_produse     = max(len(lansat), 1)
+    # Rezervarile firmelor ghiseu se distribuie uniform pe produsele lansate
+    # si se scad din stocul ramas (sunt pre-comenzi confirmate)
     rezervat_per_produs = total_rezervat // nr_produse if lansat else 0
 
     stoc = {}
@@ -505,7 +507,7 @@ def get_stoc_zi(data):
             "lansat":   qty_lansat,
             "rezervat": qty_rezervat,
             "ambalat":  qty_ambalat,
-            "ramas":    qty_lansat - qty_ambalat,
+            "ramas":    qty_lansat - qty_ambalat - qty_rezervat,
         }
     return stoc
 
@@ -541,29 +543,161 @@ def get_produse_gatite_azi(data):
 def get_all_firme(doar_active=True):
     engine = get_engine()
     with engine.connect() as conn:
-        query = "SELECT id, nume_firma, tip_contract, activ FROM firme"
+        query = """
+            SELECT id, nume_firma, tip_contract, activ,
+                   COALESCE(tip_firma, 'ghiseu')    AS tip_firma,
+                   COALESCE(cantitate_default, 0)   AS cantitate_default,
+                   client_id
+            FROM firme
+        """
         if doar_active:
             query += " WHERE activ = TRUE"
-        query += " ORDER BY nume_firma"
+        query += " ORDER BY tip_firma, nume_firma"
         return [dict(r._mapping) for r in conn.execute(text(query))]
 
 
-def add_firma(nume_firma, tip_contract='pranz_cina'):
+def ensure_client_firma(firma_id, nume_firma):
+    """Asigura ca firma are un client asociat in tabela clienti. Returneaza client_id."""
+    engine = get_engine()
+    with engine.connect() as conn:
+        row = conn.execute(text("SELECT client_id FROM firme WHERE id = :id"), {"id": firma_id}).fetchone()
+        if row and row[0]:
+            return row[0]
+    # Creeaza client nou pentru firma
+    with engine.begin() as conn:
+        res = conn.execute(text("""
+            INSERT INTO clienti (nume_client, telefon, adresa_principala)
+            VALUES (:n, :t, :a)
+            ON CONFLICT (telefon) DO UPDATE SET nume_client = EXCLUDED.nume_client
+            RETURNING id
+        """), {"n": nume_firma, "t": f"firma_{firma_id}", "a": "Livrare contract"})
+        client_id = res.fetchone()[0]
+        conn.execute(text("UPDATE firme SET client_id = :cid WHERE id = :fid"),
+                     {"cid": client_id, "fid": firma_id})
+    st.cache_data.clear()
+    return client_id
+
+
+def get_firme_livrare(doar_active=True):
+    """Firme cu tip_firma != 'ghiseu' — cele care primesc comenzi de livrare."""
+    engine = get_engine()
+    with engine.connect() as conn:
+        query = """
+            SELECT id, nume_firma, tip_contract, activ,
+                   COALESCE(tip_firma, 'ghiseu')  AS tip_firma,
+                   COALESCE(cantitate_default, 0) AS cantitate_default,
+                   client_id
+            FROM firme
+            WHERE COALESCE(tip_firma, 'ghiseu') != 'ghiseu'
+        """
+        if doar_active:
+            query += " AND activ = TRUE"
+        query += " ORDER BY tip_firma, nume_firma"
+        return [dict(r._mapping) for r in conn.execute(text(query))]
+
+
+def get_comenzi_lansate_firme(data):
+    """
+    Returneaza dict { firma_id: {'comanda_id', 'sofer', 'ora', 'status', 'detalii', 'total'} }
+    pentru firmele care au deja o comanda lansata in ziua respectiva (status != 'anulat').
+    """
+    engine = get_engine()
+    with engine.connect() as conn:
+        res = conn.execute(text("""
+            SELECT f.id AS firma_id,
+                   c.id AS comanda_id,
+                   c.sofer,
+                   c.ora_livrare_estimata,
+                   c.status,
+                   c.detalii_comanda,
+                   c.total_plata
+            FROM comenzi c
+            JOIN firme f ON f.client_id = c.client_id
+            WHERE c.data_comanda = :data
+              AND c.status != 'anulat'
+              AND COALESCE(f.tip_firma, 'ghiseu') != 'ghiseu'
+        """), {"data": str(data)})
+        result = {}
+        for r in res:
+            row = dict(r._mapping)
+            result[row["firma_id"]] = {
+                "comanda_id": row["comanda_id"],
+                "sofer":      row["sofer"],
+                "ora":        str(row["ora_livrare_estimata"])[:5],
+                "status":     row["status"],
+                "detalii":    row["detalii_comanda"],
+                "total":      row["total_plata"],
+            }
+        return result
+
+
+def get_loturi_lansate(data):
+    """
+    Returneaza loturile de productie lansate pentru data data (client_id=999, status != 'anulat').
+    dict { tip_comanda: [{'comanda_id', 'ora', 'detalii', 'total', 'status'}] }
+    """
+    engine = get_engine()
+    with engine.connect() as conn:
+        res = conn.execute(text("""
+            SELECT id, tip_comanda, ora_livrare_estimata, detalii_comanda, total_plata, status
+            FROM comenzi
+            WHERE data_comanda = :data
+              AND client_id = 999
+              AND status != 'anulat'
+            ORDER BY ora_livrare_estimata
+        """), {"data": str(data)})
+        result = {}
+        for r in res:
+            row = dict(r._mapping)
+            tip = row["tip_comanda"]
+            entry = {
+                "comanda_id": row["id"],
+                "ora":        str(row["ora_livrare_estimata"])[:5],
+                "detalii":    row["detalii_comanda"],
+                "total":      row["total_plata"],
+                "status":     row["status"],
+            }
+            result.setdefault(tip, []).append(entry)
+        return result
+
+
+def save_comanda_firma_livrare(firma_id, nume_firma, produse, sofer, ora, data, tip_comanda='livrare'):
+    """
+    Creeaza o comanda reala de livrare pentru o firma cu contract.
+    Apare automat la livrator si la bucatarie/impachetare.
+    produse: [{ 'id', 'nume', 'cantitate', 'pret' }]
+    """
+    client_id = ensure_client_firma(firma_id, nume_firma)
+    total     = sum(p['cantitate'] * p.get('pret', 0) for p in produse)
+    produse_fmt = [{"nume": p["nume"], "cantitate": p["cantitate"],
+                    "pret": p.get("pret", 0), "tip_linie": "standard"} for p in produse]
+    save_comanda_finala(
+        client_id, produse_fmt, total,
+        sofer, ora, f"Contract firma: {nume_firma}",
+        "factura", tip_comanda, data
+    )
+
+
+def add_firma(nume_firma, tip_contract='pranz_cina', tip_firma='ghiseu', cantitate_default=0):
     st.cache_data.clear()
     engine = get_engine()
     with engine.begin() as conn:
         conn.execute(text("""
-            INSERT INTO firme (nume_firma, tip_contract) VALUES (:n, :t)
-        """), {"n": nume_firma, "t": tip_contract})
+            INSERT INTO firme (nume_firma, tip_contract, tip_firma, cantitate_default)
+            VALUES (:n, :t, :tf, :cd)
+        """), {"n": nume_firma, "t": tip_contract, "tf": tip_firma, "cd": cantitate_default})
 
 
-def update_firma(firma_id, nume_firma, tip_contract, activ):
+def update_firma(firma_id, nume_firma, tip_contract, activ, tip_firma='ghiseu', cantitate_default=0):
     st.cache_data.clear()
     engine = get_engine()
     with engine.begin() as conn:
         conn.execute(text("""
-            UPDATE firme SET nume_firma=:n, tip_contract=:t, activ=:a WHERE id=:id
-        """), {"n": nume_firma, "t": tip_contract, "a": activ, "id": firma_id})
+            UPDATE firme SET nume_firma=:n, tip_contract=:t, activ=:a,
+                             tip_firma=:tf, cantitate_default=:cd
+            WHERE id=:id
+        """), {"n": nume_firma, "t": tip_contract, "a": activ,
+               "tf": tip_firma, "cd": cantitate_default, "id": firma_id})
 
 
 @st.cache_data(ttl=300)
@@ -888,6 +1022,73 @@ def get_rezervari_firme_azi(data):
             WHERE rf.data_rez = :data
         """), {"data": data})
         return {row[0]: {"nume": row[1], "cantitate": row[2]} for row in r}
+
+
+def get_raport_serviri_firme(data):
+    """
+    Raport complet serviri firme pentru o zi.
+    Returneaza lista de dict grupate pe firma:
+    [ { firma_id, nume_firma, angajat_id, nume_angajat,
+        produse, tip_ridicare, ora_servire } ]
+    """
+    engine = get_engine()
+    with engine.connect() as conn:
+        r = conn.execute(text("""
+            SELECT
+                f.id            AS firma_id,
+                f.nume_firma,
+                a.id            AS angajat_id,
+                a.nume_angajat,
+                s.tip_ridicare,
+                s.ora_servire,
+                string_agg(
+                    l.cantitate || 'x ' || l.nume_produs ||
+                    CASE WHEN l.din_nevandut THEN ' (nev.)' ELSE '' END,
+                    ', ' ORDER BY l.id
+                ) AS produse
+            FROM serviri_ghiseu s
+            JOIN firme f          ON s.firma_id  = f.id
+            LEFT JOIN angajati_firme a ON s.angajat_id = a.id
+            JOIN serviri_ghiseu_linii l ON l.servire_id = s.id
+            WHERE s.data_servire = :data
+              AND s.firma_id IS NOT NULL
+              AND s.angajat_id IS NOT NULL
+            GROUP BY f.id, f.nume_firma, a.id, a.nume_angajat,
+                     s.tip_ridicare, s.ora_servire
+            ORDER BY f.nume_firma, a.nume_angajat, s.ora_servire
+        """), {"data": data})
+        return [dict(row._mapping) for row in r]
+
+
+def get_rezumat_serviri_firme_ghiseu(data):
+    """
+    Rezumat per firma pentru monitorizare:
+    serviti, total_activi, suma, la_masa, pachete.
+    Doar firme de tip ghiseu / ghiseu_livrare.
+    """
+    engine = get_engine()
+    with engine.connect() as conn:
+        r = conn.execute(text("""
+            SELECT
+                f.id   AS firma_id,
+                f.nume_firma,
+                COUNT(DISTINCT s.id)  AS serviti,
+                (SELECT COUNT(*) FROM angajati_firme a
+                 WHERE a.firma_id = f.id AND a.activ = TRUE) AS total_activi,
+                COALESCE(SUM(l.cantitate * COALESCE(p.pret_standard, 0)), 0) AS suma,
+                COUNT(DISTINCT CASE WHEN s.tip_ridicare = 'la_masa' THEN s.id END)   AS la_masa,
+                COUNT(DISTINCT CASE WHEN s.tip_ridicare = 'pachet'  THEN s.id END)   AS pachete
+            FROM firme f
+            LEFT JOIN serviri_ghiseu s
+                   ON s.firma_id = f.id AND s.data_servire = :data
+            LEFT JOIN serviri_ghiseu_linii l ON l.servire_id = s.id
+            LEFT JOIN produse p ON p.nume = l.nume_produs
+            WHERE COALESCE(f.tip_firma, 'ghiseu') IN ('ghiseu', 'ghiseu_livrare')
+              AND f.activ = TRUE
+            GROUP BY f.id, f.nume_firma
+            ORDER BY f.nume_firma
+        """), {"data": data})
+        return [dict(row._mapping) for row in r]
 
 
 def get_total_rezervat_firme(data):

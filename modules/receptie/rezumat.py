@@ -22,8 +22,21 @@ def show():
         st.info(f"Fără comenzi în data de {data_pt_rezumat.strftime('%d-%m-%Y')}.")
         return
 
-    total_incasat = sum(c.get('total_plata', 0) for c in comenzi)
-    st.metric("Total CASH de încasat", f"{total_incasat} lei")
+    def suma_metoda(lista, metoda):
+        return sum(c.get('total_plata', 0) for c in lista if c.get('metoda_plata') == metoda)
+
+    total_cash    = suma_metoda(comenzi, 'cash')
+    total_card    = suma_metoda(comenzi, 'card')
+    total_factura = suma_metoda(comenzi, 'factura')
+    total_general = sum(c.get('total_plata', 0) for c in comenzi)
+
+    mc, mcard, mfact, mtot = st.columns(4)
+    mc.metric("💵 Cash de încasat", f"{total_cash} lei")
+    mcard.metric("💳 Card (încasat)", f"{total_card} lei")
+    mfact.metric("🧾 Factură", f"{total_factura} lei")
+    mtot.metric("📊 Total general", f"{total_general} lei")
+
+    st.divider()
 
     livratori = db.get_lista_livratori()
 
@@ -31,13 +44,21 @@ def show():
         comenzi_sofer = [c for c in comenzi if c['sofer'] == l]
 
         if comenzi_sofer:
-            suma_l = sum(s.get('total_plata', 0) for s in comenzi_sofer)
-            with st.expander(f"🚚 {l.upper()} — Total Cash: {suma_l} lei"):
+            cash_l    = suma_metoda(comenzi_sofer, 'cash')
+            card_l    = suma_metoda(comenzi_sofer, 'card')
+            factura_l = suma_metoda(comenzi_sofer, 'factura')
+            parti = []
+            if cash_l:    parti.append(f"💵 Cash: {cash_l} lei")
+            if card_l:    parti.append(f"💳 Card: {card_l} lei")
+            if factura_l: parti.append(f"🧾 Fact: {factura_l} lei")
+            titlu_sofer = f"🚚 {l.upper()} — " + "  |  ".join(parti) if parti else f"🚚 {l.upper()}"
+
+            with st.expander(titlu_sofer):
                 h1, h2, h3, h4, h5 = st.columns([0.8, 3, 4, 1.2, 0.8])
                 h1.write("**Ora**")
                 h2.write("**Client & Adresă**")
                 h3.write("**Produse (Listă)**")
-                h4.write("**Suma Cash**")
+                h4.write("**Sumă**")
                 h5.write("**Șterge**")
                 st.divider()
 
@@ -64,8 +85,10 @@ def show():
                                 st.write(f"• {parte}")
 
                     with c4:
+                        metoda = cz.get('metoda_plata', '')
+                        icon = '💵' if metoda == 'cash' else ('💳' if metoda == 'card' else '🧾')
                         st.subheader(f"{cz['total_plata']} lei")
-                        st.caption(f"Metoda: {cz['metoda_plata']}")
+                        st.caption(f"{icon} {metoda.upper()}")
 
                     with c5:
                         if st.button("🗑️", key=f"del_{cz['id']}", help="Șterge comanda"):

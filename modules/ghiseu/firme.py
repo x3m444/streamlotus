@@ -14,7 +14,9 @@ import database as db
 def show(data_azi):
     st.subheader("🏢 Servire Firme cu Contract")
 
-    firme = db.get_all_firme(doar_active=True)
+    toate_firme = db.get_all_firme(doar_active=True)
+    firme = [f for f in toate_firme
+             if f.get("tip_firma", "ghiseu") in ("ghiseu", "ghiseu_livrare")]
     if not firme:
         st.info("Nu există firme active. Adminul trebuie să adauge firme cu contract.")
         return

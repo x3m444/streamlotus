@@ -168,58 +168,173 @@ def show(data_plan):
                         _show_produse_breakdown(date_tip['produse'])
 
         # -------------------------------------------------------
+        # EXPORT REZUMAT ZILNIC
+        # -------------------------------------------------------
+        rows_export = []
+        for tip, date_tip in sectii.items():
+            for produs, by_eff in date_tip['produse'].items():
+                total = sum(by_eff.values())
+                rows_export.append({
+                    "Secție": tip,
+                    "Produs": produs,
+                    **{label: by_eff.get(eff_key, 0) for eff_key, _, label, _ in EFF_STATUSES},
+                    "Total porții": total,
+                })
+        if rows_export:
+            df_zilnic = pd.DataFrame(rows_export)
+            rows_fin = [{"Secție": tip, "Vânzări (lei)": d["bani"], "Nr. comenzi": sum(d["comenzi_st"].values())}
+                        for tip, d in sectii.items()]
+            df_fin = pd.DataFrame(rows_fin)
+
+            data_str = data_plan.strftime('%d.%m.%Y')
+            col_exp1, col_exp2 = st.columns(2)
+            with col_exp1:
+                excel_cantitati = utils.export_raport_excel(
+                    df_zilnic,
+                    titlu=f"Raport Cantități — {data_str}",
+                    subtitlu=f"Situație producție și distribuție porții • {data_str}",
+                    sheet_name="Cantități",
+                )
+                st.download_button(
+                    "📥 Export Cantități Zilnice",
+                    data=excel_cantitati,
+                    file_name=f"Cantitati_{data_plan.strftime('%d%m%Y')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                )
+            with col_exp2:
+                excel_financiar = utils.export_raport_excel(
+                    df_fin,
+                    titlu=f"Raport Financiar — {data_str}",
+                    subtitlu=f"Vânzări și încasări pe secții • {data_str}",
+                    sheet_name="Financiar",
+                )
+                st.download_button(
+                    "📥 Export Financiar Zilnic",
+                    data=excel_financiar,
+                    file_name=f"Financiar_{data_plan.strftime('%d%m%Y')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                )
+
+        # -------------------------------------------------------
         # 3. LISTA DETALIATA PE COMENZI
         # -------------------------------------------------------
-        st.markdown("### 📝 Detalii Comenzi & Status Real-Time")
+        loturi     = [c for c in toate_comenzile if c.get('client_id') == 999]
+        comenzi_cl = [c for c in toate_comenzile if c.get('client_id') != 999]
 
-        for cz in toate_comenzile:
-            icon_tip     = "🚚" if cz['tip_comanda'] == 'livrare' else "🏢"
-            ora          = str(cz['ora_livrare_estimata'])[:5]
-            order_status = cz.get('status_comanda', 'nou')
-            st_emoji     = STATUS_COMANDA_EMOJI.get(order_status, '❓')
-            titlu = (
-                f"{st_emoji} {order_status.upper()} | "
-                f"{ora} | {cz['client']} | {cz.get('total_plata', 0):.2f} lei | {icon_tip}"
-            )
+        TIP_LOT_LABEL = {
+            'pranz':     '🍲 Lot Prânz',
+            'cina':      '🌙 Lot Cină',
+            'sandwich':  '🥪 Lot Sandwich',
+            'eveniment': '🎉 Lot Eveniment',
+            'special':   '⭐ Lot Special',
+        }
 
-            with st.expander(titlu):
-                col_stanga, col_dreapta = st.columns([3, 1])
+        if loturi:
+            st.markdown("### 🏭 Loturi Lansate în Producție")
+            for cz in loturi:
+                ora          = str(cz['ora_livrare_estimata'])[:5]
+                order_status = cz.get('status_comanda', 'nou')
+                st_emoji     = STATUS_COMANDA_EMOJI.get(order_status, '❓')
+                tip_label    = TIP_LOT_LABEL.get(cz['tip_comanda'], f"📦 {cz['tip_comanda'].upper()}")
+                titlu = (
+                    f"{tip_label}  |  {ora}  |  "
+                    f"{cz.get('total_plata', 0):.0f} lei  |  {st_emoji} {order_status.upper()}"
+                )
+                with st.expander(titlu):
+                    col_stanga, col_dreapta = st.columns([3, 1])
+                    with col_stanga:
+                        if cz['detalii']:
+                            for linie in cz['detalii'].split(', '):
+                                try:
+                                    produs_full, line_st = linie.split('|')
+                                    eff = _eff_key(line_st.strip(), order_status)
+                                    cfg = next((e for e in EFF_STATUSES if e[0] == eff), None)
+                                    if cfg:
+                                        _, icon, label, color = cfg
+                                        st.markdown(f"{icon} :{color}[{produs_full.strip()}] — *{label}*")
+                                    else:
+                                        st.write(f"• {produs_full.strip()}")
+                                except Exception:
+                                    st.write(f"• {linie}")
+                    with col_dreapta:
+                        if st.button("🗑️ Șterge", key=f"admin_del_lot_{cz['id']}", use_container_width=True):
+                            if db.delete_comanda(cz['id']):
+                                st.rerun()
 
-                with col_stanga:
-                    st.write("**Produse și Stadiu Producție:**")
-                    if cz['detalii']:
-                        for linie in cz['detalii'].split(', '):
-                            try:
-                                produs_full, line_st = linie.split('|')
-                                eff = _eff_key(line_st.strip(), order_status)
-                                # gasim config-ul pentru acest eff
-                                cfg = next((e for e in EFF_STATUSES if e[0] == eff), None)
-                                if cfg:
-                                    _, icon, label, color = cfg
-                                    st.markdown(f"{icon} :{color}[{produs_full.strip()}] — *{label}*")
-                                else:
-                                    st.write(f"• {produs_full.strip()}")
-                            except Exception:
-                                st.write(f"• {linie}")
-                    else:
-                        st.caption("Fără produse")
-
-                    st.divider()
-                    st.caption(f"📞 {cz.get('telefon', 'N/A')} | 💳 {cz.get('metoda_plata', '').upper()}")
-                    if cz['tip_comanda'] == 'livrare':
-                        st.caption(f"📍 {cz.get('adresa_principala', 'N/A')}")
-
-                with col_dreapta:
-                    if st.button("Anulează", key=f"admin_cancel_{cz['id']}", use_container_width=True):
-                        db.update_status_comanda(engine, cz['id'], 'anulat')
-                        st.rerun()
-
-                    if st.button("🗑️ Șterge", key=f"admin_del_{cz['id']}", use_container_width=True):
-                        if db.delete_comanda(cz['id']):
+        if comenzi_cl:
+            st.markdown("### 📝 Comenzi Clienți")
+            for cz in comenzi_cl:
+                icon_tip     = "🚚" if cz['tip_comanda'] == 'livrare' else "🏢"
+                ora          = str(cz['ora_livrare_estimata'])[:5]
+                order_status = cz.get('status_comanda', 'nou')
+                st_emoji     = STATUS_COMANDA_EMOJI.get(order_status, '❓')
+                titlu = (
+                    f"{st_emoji} {order_status.upper()}  |  "
+                    f"{ora}  |  {cz['client']}  |  "
+                    f"{cz.get('total_plata', 0):.2f} lei  |  {icon_tip}"
+                )
+                with st.expander(titlu):
+                    col_stanga, col_dreapta = st.columns([3, 1])
+                    with col_stanga:
+                        st.write("**Produse și Stadiu Producție:**")
+                        if cz['detalii']:
+                            for linie in cz['detalii'].split(', '):
+                                try:
+                                    produs_full, line_st = linie.split('|')
+                                    eff = _eff_key(line_st.strip(), order_status)
+                                    cfg = next((e for e in EFF_STATUSES if e[0] == eff), None)
+                                    if cfg:
+                                        _, icon, label, color = cfg
+                                        st.markdown(f"{icon} :{color}[{produs_full.strip()}] — *{label}*")
+                                    else:
+                                        st.write(f"• {produs_full.strip()}")
+                                except Exception:
+                                    st.write(f"• {linie}")
+                        else:
+                            st.caption("Fără produse")
+                        st.divider()
+                        st.caption(f"📞 {cz.get('telefon', 'N/A')} | 💳 {cz.get('metoda_plata', '').upper()}")
+                        if cz['tip_comanda'] == 'livrare':
+                            st.caption(f"📍 {cz.get('adresa_principala', 'N/A')}")
+                    with col_dreapta:
+                        if st.button("Anulează", key=f"admin_cancel_{cz['id']}", use_container_width=True):
+                            db.update_status_comanda(engine, cz['id'], 'anulat')
                             st.rerun()
+                        if st.button("🗑️ Șterge", key=f"admin_del_{cz['id']}", use_container_width=True):
+                            if db.delete_comanda(cz['id']):
+                                st.rerun()
+
+        # -------------------------------------------------------
+        # 4. SERVIRI FIRME GHIȘEU
+        # -------------------------------------------------------
+        serviri_gh = db.get_rezumat_serviri_firme_ghiseu(data_plan)
+        if serviri_gh:
+            st.markdown("### 🏢 Serviri Firme Ghișeu")
+            for f in serviri_gh:
+                serviti     = f["serviti"]
+                total_activi= f["total_activi"]
+                suma        = f["suma"]
+                la_masa     = f["la_masa"]
+                pachete     = f["pachete"]
+                progres     = f"{serviti}/{total_activi}" if total_activi else str(serviti)
+                if serviti == 0:
+                    culoare = "gray"
+                elif serviti < total_activi:
+                    culoare = "orange"
+                else:
+                    culoare = "green"
+                titlu_f = (
+                    f":{culoare}[**{f['nume_firma']}**]  —  "
+                    f"{progres} serviți  |  "
+                    f"🍽️ {la_masa} masă  📦 {pachete} pachete  |  "
+                    f"💰 {suma:.0f} lei"
+                )
+                st.markdown(titlu_f)
 
     # -------------------------------------------------------
-    # 4. RAPORTARE PERIODICA (interval de date)
+    # 5. RAPORTARE PERIODICA (interval de date)
     # -------------------------------------------------------
     st.divider()
     st.subheader("📊 Raportare Periodică")
@@ -255,3 +370,17 @@ def show(data_plan):
                 df_raport          = pd.DataFrame(date_raport)
                 df_raport.columns  = ['Secția', 'Total Valoare (lei)', 'Nr. Comenzi']
                 st.table(df_raport)
+
+                excel_raport = utils.export_raport_excel(
+                    df_raport,
+                    titlu=f"Raport Periodic {d_start.strftime('%d.%m.%Y')} — {d_end.strftime('%d.%m.%Y')}",
+                    subtitlu=f"Vânzări totale pe secții • interval {d_start.strftime('%d.%m.%Y')} – {d_end.strftime('%d.%m.%Y')}",
+                    sheet_name="Raport Periodic",
+                )
+                st.download_button(
+                    "📥 Exportă Raport Excel",
+                    data=excel_raport,
+                    file_name=f"Raport_{d_start.strftime('%d%m%Y')}_{d_end.strftime('%d%m%Y')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                )

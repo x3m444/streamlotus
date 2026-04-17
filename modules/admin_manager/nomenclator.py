@@ -15,6 +15,7 @@ import pandas as pd
 import database as db
 import utils
 from datetime import date
+import io
 
 
 def show():
@@ -50,6 +51,118 @@ def show():
                 st.rerun()
             else:
                 st.error("⚠️ Completează toate câmpurile!")
+
+    # -------------------------------------------------------
+    # IMPORT EXCEL
+    # -------------------------------------------------------
+    CATEGORII_VALIDE = ["felul_1", "felul_2", "salate", "sandwich", "special", "desert"]
+
+    with st.expander("📂 Import din Excel", expanded=False):
+        st.markdown("**Format obligatoriu al fișierului Excel:**")
+        col_spec1, col_spec2, col_spec3 = st.columns(3)
+        col_spec1.info("**Coloana A: `Denumire`**\nText, obligatoriu\nex: Ciorbă de burtă")
+        col_spec2.info("**Coloana B: `Categorie`**\nUnul din:\n`felul_1` `felul_2` `salate`\n`sandwich` `special` `desert`")
+        col_spec3.info("**Coloana C: `Pret`**\nNumăr pozitiv (RON)\nex: 15.50")
+
+        # Template descarcabil
+        df_template = pd.DataFrame({
+            "Denumire":  ["Ciorbă de burtă", "Mușchi de porc", "Salată de varză"],
+            "Categorie": ["felul_1",          "felul_2",         "salate"],
+            "Pret":      [12.0,               18.0,              5.0],
+        })
+        buf_tmpl = io.BytesIO()
+        with pd.ExcelWriter(buf_tmpl, engine="xlsxwriter") as wr:
+            df_template.to_excel(wr, index=False, sheet_name="Nomenclator")
+            ws = wr.sheets["Nomenclator"]
+            hfmt = wr.book.add_format({"bold": True, "bg_color": "#D7E4BC", "border": 1})
+            for i, col in enumerate(df_template.columns):
+                ws.write(0, i, col, hfmt)
+                ws.set_column(i, i, 25)
+        st.download_button(
+            "⬇️ Descarcă template Excel",
+            data=buf_tmpl.getvalue(),
+            file_name="template_nomenclator.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
+        st.divider()
+        fisier = st.file_uploader("Încarcă fișierul Excel completat:", type=["xlsx", "xls"])
+
+        if fisier:
+            try:
+                df_import = pd.read_excel(fisier)
+            except Exception as e:
+                st.error(f"❌ Fișierul nu poate fi citit: {e}")
+                df_import = None
+
+            if df_import is not None:
+                # Normalizare coloane (trim + lowercase)
+                df_import.columns = [str(c).strip() for c in df_import.columns]
+                coloane_necesare = {"Denumire", "Categorie", "Pret"}
+                coloane_lipsa = coloane_necesare - set(df_import.columns)
+
+                if coloane_lipsa:
+                    st.error(f"❌ Lipsesc coloanele: **{', '.join(coloane_lipsa)}**. Folosește template-ul de mai sus.")
+                else:
+                    # Validare rând cu rând
+                    erori = []
+                    randuri_ok = []
+
+                    for idx, row in df_import.iterrows():
+                        nr = idx + 2  # nr rând Excel (header = 1)
+                        den = str(row["Denumire"]).strip() if pd.notna(row["Denumire"]) else ""
+                        cat = str(row["Categorie"]).strip() if pd.notna(row["Categorie"]) else ""
+                        pret_raw = row["Pret"]
+
+                        erori_rand = []
+                        if not den:
+                            erori_rand.append("Denumire lipsă")
+                        if cat not in CATEGORII_VALIDE:
+                            erori_rand.append(f"Categorie invalidă: `{cat}` (valide: {', '.join(CATEGORII_VALIDE)})")
+                        try:
+                            pret = float(pret_raw)
+                            if pret < 0:
+                                erori_rand.append("Prețul nu poate fi negativ")
+                        except (ValueError, TypeError):
+                            pret = None
+                            erori_rand.append(f"Preț invalid: `{pret_raw}`")
+
+                        if erori_rand:
+                            erori.append((nr, den or "—", erori_rand))
+                        else:
+                            randuri_ok.append({"Denumire": den, "Categorie": cat, "Pret": pret})
+
+                    # Raport validare
+                    c_ok, c_err = st.columns(2)
+                    c_ok.metric("✅ Rânduri valide", len(randuri_ok))
+                    c_err.metric("❌ Rânduri cu erori", len(erori))
+
+                    if erori:
+                        st.error("**Erori găsite — rândurile de mai jos nu vor fi importate:**")
+                        for nr_rand, den_rand, msgs in erori:
+                            st.markdown(f"- Rând **{nr_rand}** (`{den_rand}`): " + "; ".join(msgs))
+
+                    if randuri_ok:
+                        st.markdown("**Preview produse valide:**")
+                        st.dataframe(pd.DataFrame(randuri_ok), use_container_width=True, hide_index=True)
+
+                        # Verifica duplicate fata de nomenclatorul existent
+                        existente = {p["nume"].lower() for p in db.get_toate_produsele()}
+                        duplicate = [r for r in randuri_ok if r["Denumire"].lower() in existente]
+                        noi = [r for r in randuri_ok if r["Denumire"].lower() not in existente]
+
+                        if duplicate:
+                            st.warning(f"⚠️ {len(duplicate)} produs(e) există deja în nomenclator și vor fi **ignorate**: " +
+                                       ", ".join(r["Denumire"] for r in duplicate))
+
+                        if noi:
+                            if st.button(f"✅ Importă {len(noi)} produs(e) noi", type="primary", use_container_width=True):
+                                for r in noi:
+                                    db.add_produs(r["Denumire"], r["Categorie"], r["Pret"])
+                                st.success(f"✅ {len(noi)} produse importate cu succes!")
+                                st.rerun()
+                        else:
+                            st.info("Toate produsele valide există deja în nomenclator.")
 
     st.divider()
 

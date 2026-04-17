@@ -5,6 +5,7 @@ from modules.admin_manager import main as admin_main
 from modules.bucatarie import main as bucatarie_main
 from modules.ghiseu import main as ghiseu_main
 from modules.receptie import main as receptie_main
+from modules import manual
 
 st.set_page_config(page_title="Cantina Lotus", layout="wide", page_icon="🍱")
 
@@ -40,6 +41,13 @@ else:
 
     rol = st.sidebar.selectbox("Rol (Test):", ["Admin", "Recepție", "Bucătărie", "Ghișeu", "Livrator"])
     st.session_state['rol'] = rol
+
+    if st.sidebar.button("📖 Manual", use_container_width=True):
+        st.session_state['show_manual'] = not st.session_state.get('show_manual', False)
+
+    if st.session_state.get('show_manual', False):
+        manual.show_manual()
+        st.stop()
 
     if rol == "Admin":
         t1, t2, t3, t4 = st.tabs(["⚙️ Admin", "📝 Recepție", "👨‍🍳 Bucătărie", "🚚 Livrare"])
