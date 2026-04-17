@@ -154,12 +154,29 @@ def show(data_azi):
                                 nev_ales = "— fără —"
                                 st.caption("-")
 
-                        def _produse(meniu, nev, _om=optiuni_meniu, _opt_nev=optiuni_nevandut):
+                        nev_este_f2 = (nev_ales != "— fără —") and (
+                            (f2v1 and nev_ales == f2v1["nume"]) or
+                            (f2v2 and nev_ales == f2v2["nume"])
+                        )
+
+                        def _produse(meniu, nev, _om=optiuni_meniu, _opt_nev=optiuni_nevandut,
+                                     _nev_f2=nev_este_f2, _salata=salata, _nev_stoc=nevandut):
                             entry = _om.get(meniu, {})
                             p = [{"nume_produs": x["nume"], "cantitate": 1, "din_nevandut": False}
                                  for x in entry.get("componente", [])]
                             if nev != "— fără —" and nev in _opt_nev:
                                 p.append({"nume_produs": nev, "cantitate": 1, "din_nevandut": True})
+                                # Daca nevandutul e felul_2, atasam si salata
+                                if _nev_f2 and _salata:
+                                    salata_din_nev = (
+                                        _salata["nume"] in _nev_stoc and
+                                        _nev_stoc[_salata["nume"]]["ramas"] > 0
+                                    )
+                                    p.append({
+                                        "nume_produs": _salata["nume"],
+                                        "cantitate": 1,
+                                        "din_nevandut": salata_din_nev
+                                    })
                             return p
 
                         if optiuni_lista:
