@@ -28,7 +28,7 @@ def show(data_selectata, engine):
                 firma_curenta = pct['nume_firma']
                 st.markdown(f"**{firma_curenta}**")
             col_ang, col_prod, col_btn = st.columns([2, 4, 1.5])
-            col_ang.write(pct['angajat'] or '—')
+            col_ang.write(pct['nume_angajat'] or '—')
             col_prod.caption(pct['produse'])
             if pct['status_pachet'] == 'astept':
                 if col_btn.button("📦 Ambalat", key=f"amb_{pct['servire_id']}",

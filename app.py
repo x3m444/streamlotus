@@ -8,6 +8,26 @@ from modules.receptie import main as receptie_main
 
 st.set_page_config(page_title="Cantina Lotus", layout="wide", page_icon="🍱")
 
+st.markdown("""
+<style>
+@media (max-width: 768px) {
+    /* Butoane mai mari pentru touch */
+    .stButton > button {
+        min-height: 52px !important;
+        font-size: 16px !important;
+    }
+    /* Input-uri mai mari — previne zoom automat iOS */
+    input, select, textarea {
+        font-size: 16px !important;
+    }
+    /* Taburi scroll orizontal */
+    [data-testid="stTabs"] {
+        overflow-x: auto !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.sidebar.image("https://img.icons8.com/color/96/000000/restaurant.png", width=80)
 pagina = st.sidebar.radio("Navigare", ["🏠 Acasă (Public)", "🔒 Zona Staff"])
 

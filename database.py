@@ -851,9 +851,9 @@ def _plan_to_componente(plan_zi):
         'v1':          [p for p in [f1, f2v1, salata] if p],
         'v2':          [p for p in [f1, f2v2, salata] if p],
         'solo_f1':     [p for p in [f1]               if p],
-        'solo_f2v1':   [p for p in [f2v1]             if p],
-        'solo_f2v2':   [p for p in [f2v2]             if p],
-        'solo_salata': [p for p in [salata]            if p],
+        'solo_f2v1':   [p for p in [f2v1, salata]     if p],
+        'solo_f2v2':   [p for p in [f2v2, salata]     if p],
+        'solo_salata': [],
     }
 
 

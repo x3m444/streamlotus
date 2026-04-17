@@ -214,22 +214,28 @@ def show(data_plan):
         if 'buffer_special' not in st.session_state:
             st.session_state.buffer_special = []
 
-        c1, c2, c3 = st.columns([3, 1, 1])
+        categorii = sorted({p['categorie'] for p in toate if p.get('categorie')})
+        c1, c2, c3, c4 = st.columns([2, 3, 1, 1])
         with c1:
-            p_sel = st.selectbox("Produs:", toate, format_func=lambda x: x['nume'], key="p_spec")
+            cat_sel = st.selectbox("Categorie:", categorii, key="spec_cat")
         with c2:
-            q_sel = st.number_input("Cant:", min_value=1, value=1, key="q_spec")
+            produse_cat = [p for p in toate if p.get('categorie') == cat_sel]
+            p_sel = st.selectbox("Produs:", produse_cat,
+                                 format_func=lambda x: x['nume'], key="p_spec")
         with c3:
+            q_sel = st.number_input("Cant:", min_value=1, value=1, key="q_spec")
+        with c4:
             st.write("##")
-            if st.button("➕ Adaugă", key="btn_add_spec"):
-                pret_val = p_sel.get('pret_standard') or p_sel.get('pret', 0)
-                st.session_state.buffer_special.append({
-                    "id": p_sel['id'],
-                    "nume": p_sel['nume'],
-                    "cantitate": q_sel,
-                    "pret": pret_val
-                })
-                st.rerun()
+            if st.button("➕ Adaugă", key="btn_add_spec", use_container_width=True):
+                if p_sel:
+                    pret_val = p_sel.get('pret_standard') or p_sel.get('pret', 0)
+                    st.session_state.buffer_special.append({
+                        "id": p_sel['id'],
+                        "nume": p_sel['nume'],
+                        "cantitate": q_sel,
+                        "pret": pret_val
+                    })
+                    st.rerun()
 
         if st.session_state.buffer_special:
             st.markdown("---")

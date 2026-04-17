@@ -141,10 +141,10 @@ def show(data_azi):
         st.divider()
         st.markdown("**Bon curent:**")
         for i, item in enumerate(st.session_state.bon_buffer):
-            c1, c2, c3 = st.columns([4, 1, 1])
-            c1.write(f"{'🔄 ' if item['din_nevandut'] else ''}{item['nume_produs']}")
-            c2.write(f"x{item['cantitate']}")
-            if c3.button("❌", key=f"del_bon_{i}"):
+            c1, c2 = st.columns([6, 1])
+            prefix = '🔄 ' if item['din_nevandut'] else ''
+            c1.markdown(f"{prefix}**{item['nume_produs']}** — x{item['cantitate']}")
+            if c2.button("❌", key=f"del_bon_{i}", use_container_width=True):
                 st.session_state.bon_buffer.pop(i)
                 st.rerun()
 
