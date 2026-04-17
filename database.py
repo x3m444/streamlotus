@@ -304,7 +304,14 @@ def get_loturi_productie(data):
             FROM comenzi c
             LEFT JOIN comenzi_linii l ON c.id = l.comanda_id
             WHERE c.data_comanda = :data
-              AND c.client_id = 999
+              AND (
+                c.client_id = 999
+                OR EXISTS (
+                    SELECT 1 FROM firme f
+                    WHERE f.client_id = c.client_id
+                      AND COALESCE(f.tip_firma, 'ghiseu') != 'ghiseu'
+                )
+              )
             GROUP BY c.id, c.status, c.tip_comanda, c.ora_livrare_estimata, c.observatii
             ORDER BY c.tip_comanda, c.ora_livrare_estimata
         """), {"data": data})

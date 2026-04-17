@@ -86,7 +86,8 @@ def show(data_selectata, engine):
             status_txt = f"ASTEAPTA ({nr_gatite}/{nr_total} gatite)"
 
         ora = str(cmd.get('ora_livrare_estimata', ''))[:5]
-        titlu = f"{icon} {status_txt} | #{cmd['id']} — {cmd['client']} | ora {ora}"
+        sofer_txt = f" | 🚗 {cmd['sofer']}" if cmd.get('sofer') else ""
+        titlu = f"{icon} {status_txt} | #{cmd['id']} — {cmd['client']} | ora {ora}{sofer_txt}"
 
         with st.expander(titlu, expanded=(toate_gata or bool(lipsa_stoc))):
             col_produse, col_actiuni = st.columns([3, 1])
@@ -103,10 +104,11 @@ def show(data_selectata, engine):
                     except Exception:
                         st.write(f"• {linie}")
 
+                sofer_cap = f" | 🚗 {cmd['sofer']}" if cmd.get('sofer') else ""
                 st.caption(
                     f"📞 {cmd.get('telefon', 'N/A')} | "
                     f"📍 {cmd.get('adresa_principala', 'N/A')} | "
-                    f"💳 {cmd.get('metoda_plata', '').upper()}"
+                    f"💳 {cmd.get('metoda_plata', '').upper()}{sofer_cap}"
                 )
 
                 if lipsa_stoc:

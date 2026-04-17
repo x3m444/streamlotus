@@ -270,10 +270,11 @@ def show(data_plan):
                 ora          = str(cz['ora_livrare_estimata'])[:5]
                 order_status = cz.get('status_comanda', 'nou')
                 st_emoji     = STATUS_COMANDA_EMOJI.get(order_status, '❓')
+                sofer_txt = f"  |  🚗 {cz['sofer']}" if cz.get('sofer') else ""
                 titlu = (
                     f"{st_emoji} {order_status.upper()}  |  "
                     f"{ora}  |  {cz['client']}  |  "
-                    f"{cz.get('total_plata', 0):.2f} lei  |  {icon_tip}"
+                    f"{cz.get('total_plata', 0):.2f} lei  |  {icon_tip}{sofer_txt}"
                 )
                 with st.expander(titlu):
                     col_stanga, col_dreapta = st.columns([3, 1])
@@ -295,7 +296,8 @@ def show(data_plan):
                         else:
                             st.caption("Fără produse")
                         st.divider()
-                        st.caption(f"📞 {cz.get('telefon', 'N/A')} | 💳 {cz.get('metoda_plata', '').upper()}")
+                        sofer_cap = f"  |  🚗 {cz['sofer']}" if cz.get('sofer') else ""
+                        st.caption(f"📞 {cz.get('telefon', 'N/A')} | 💳 {cz.get('metoda_plata', '').upper()}{sofer_cap}")
                         if cz['tip_comanda'] == 'livrare':
                             st.caption(f"📍 {cz.get('adresa_principala', 'N/A')}")
                     with col_dreapta:
