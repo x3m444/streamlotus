@@ -43,6 +43,7 @@ def get_toate_produsele():
         return [dict(r._mapping) for r in result]
 
 
+@st.cache_data(ttl=600)
 def get_meniu_planificat(data_start, data_end=None, tip_plan="pranz"):
     """
     Planificarea meniului pentru o zi sau un interval.
@@ -103,6 +104,7 @@ def delete_produs(id_produs):
 
 
 def salveaza_planificare(data_zi, produse_ids, tip_plan="pranz"):
+    st.cache_data.clear()
     """Suprascrie planificarea pentru ziua si tipul dat (delete + insert)."""
     engine = get_engine()
     with engine.begin() as conn:
@@ -121,6 +123,7 @@ def salveaza_planificare(data_zi, produse_ids, tip_plan="pranz"):
 # CLIENTI & LIVRATORI
 # =============================================================
 
+@st.cache_data(ttl=600)
 def get_all_clienti():
     """Toti clientii, ordonati alfabetic."""
     engine = get_engine()
@@ -164,6 +167,7 @@ def delete_client(id_client):
         return False
 
 
+@st.cache_data(ttl=600)
 def get_lista_livratori():
     engine = get_engine()
     with engine.connect() as conn:
@@ -510,6 +514,7 @@ def get_stoc_zi(data):
 # PRODUSE GATITE
 # =============================================================
 
+@st.cache_data(ttl=15)
 def get_produse_gatite_azi(data):
     """
     Returneaza set cu numele produselor marcate ca 'gatit' de bucatarie azi.
@@ -532,6 +537,7 @@ def get_produse_gatite_azi(data):
 # FIRME & ANGAJATI
 # =============================================================
 
+@st.cache_data(ttl=300)
 def get_all_firme(doar_active=True):
     engine = get_engine()
     with engine.connect() as conn:
@@ -543,6 +549,7 @@ def get_all_firme(doar_active=True):
 
 
 def add_firma(nume_firma, tip_contract='pranz_cina'):
+    st.cache_data.clear()
     engine = get_engine()
     with engine.begin() as conn:
         conn.execute(text("""
@@ -551,6 +558,7 @@ def add_firma(nume_firma, tip_contract='pranz_cina'):
 
 
 def update_firma(firma_id, nume_firma, tip_contract, activ):
+    st.cache_data.clear()
     engine = get_engine()
     with engine.begin() as conn:
         conn.execute(text("""
@@ -558,6 +566,7 @@ def update_firma(firma_id, nume_firma, tip_contract, activ):
         """), {"n": nume_firma, "t": tip_contract, "a": activ, "id": firma_id})
 
 
+@st.cache_data(ttl=300)
 def get_angajati_firma(firma_id, doar_activi=True):
     engine = get_engine()
     with engine.connect() as conn:
@@ -569,6 +578,7 @@ def get_angajati_firma(firma_id, doar_activi=True):
 
 
 def add_angajat(firma_id, nume_angajat):
+    st.cache_data.clear()
     engine = get_engine()
     with engine.begin() as conn:
         conn.execute(text("""
@@ -577,6 +587,7 @@ def add_angajat(firma_id, nume_angajat):
 
 
 def toggle_angajat(angajat_id, activ):
+    st.cache_data.clear()
     engine = get_engine()
     with engine.begin() as conn:
         conn.execute(text("""
@@ -728,6 +739,7 @@ def get_serviri_eveniment_azi(comanda_ref_id, data):
 # NEVANDUT
 # =============================================================
 
+@st.cache_data(ttl=15)
 def get_stoc_nevandut(data):
     """Stocul declarat nevandut pentru o zi. { nume_produs: {cantitate, cantitate_servita, ramas} }"""
     engine = get_engine()
