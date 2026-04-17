@@ -73,12 +73,17 @@ def show(data_azi):
         st.warning("Nu există meniu disponibil pentru servire (stoc epuizat sau negatit).")
         return
 
+    # Batch — un singur query pentru fiecare, in loc de N query-uri per firma
+    toti_angajatii  = db.get_toti_angajatii_firme()
+    toti_serviti    = db.get_toti_serviti_azi(data_azi)
+    toate_pachetele = db.get_toate_pachetele_azi(data_azi)
+
     for firma in firme:
         firma_id     = firma["id"]
-        toti         = db.get_angajati_firma(firma_id, doar_activi=False)
+        toti         = toti_angajatii.get(firma_id, [])
         activi       = [a for a in toti if a["activ"]]
         inactivi     = [a for a in toti if not a["activ"]]
-        serviti_azi  = db.get_angajati_serviti_azi(firma_id, data_azi)
+        serviti_azi  = toti_serviti.get(firma_id, {})
         nr_serviti   = len(serviti_azi)
 
         titlu = f"🏢 {firma['nume_firma']}  —  {nr_serviti}/{len(activi)} serviți"
@@ -98,7 +103,7 @@ def show(data_azi):
 
             st.divider()
 
-            pachete_ang = db.get_pachete_angajat_azi(firma_id, data_azi)
+            pachete_ang = toate_pachetele.get(firma_id, {})
 
             for ang in activi:
                 aid         = ang["id"]

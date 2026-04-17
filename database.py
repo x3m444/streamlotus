@@ -595,6 +595,63 @@ def toggle_angajat(angajat_id, activ):
         """), {"a": activ, "id": angajat_id})
 
 
+def get_toti_angajatii_firme():
+    """Batch: toti angajatii din toate firmele. { firma_id: [angajati] }"""
+    engine = get_engine()
+    with engine.connect() as conn:
+        r = conn.execute(text("""
+            SELECT firma_id, id, nume_angajat, activ
+            FROM angajati_firme
+            ORDER BY firma_id, nume_angajat
+        """))
+        result = {}
+        for row in r:
+            result.setdefault(row[0], []).append(
+                {"id": row[1], "nume_angajat": row[2], "activ": row[3]}
+            )
+        return result
+
+
+def get_toti_serviti_azi(data):
+    """Batch: toti angajatii serviti azi din toate firmele. { firma_id: {angajat_id: text} }"""
+    engine = get_engine()
+    with engine.connect() as conn:
+        r = conn.execute(text("""
+            SELECT s.firma_id, s.angajat_id,
+                   string_agg(l.cantitate || 'x ' || l.nume_produs ||
+                       CASE WHEN l.din_nevandut THEN ' (nev.)' ELSE '' END,
+                       ', ' ORDER BY l.id) AS ce_a_primit
+            FROM serviri_ghiseu s
+            JOIN serviri_ghiseu_linii l ON l.servire_id = s.id
+            WHERE s.data_servire = :data AND s.angajat_id IS NOT NULL
+            GROUP BY s.firma_id, s.angajat_id
+        """), {"data": data})
+        result = {}
+        for row in r:
+            result.setdefault(row[0], {})[row[1]] = row[2]
+        return result
+
+
+def get_toate_pachetele_azi(data):
+    """Batch: toate pachetele azi din toate firmele. { firma_id: {angajat_id: {servire_id, status, produse}} }"""
+    engine = get_engine()
+    with engine.connect() as conn:
+        r = conn.execute(text("""
+            SELECT s.firma_id, s.angajat_id, s.id AS servire_id, s.status_pachet,
+                   string_agg(l.cantitate || 'x ' || l.nume_produs, ', ' ORDER BY l.id) AS produse
+            FROM serviri_ghiseu s
+            JOIN serviri_ghiseu_linii l ON l.servire_id = s.id
+            WHERE s.data_servire = :data AND s.tip_ridicare = 'pachet'
+            GROUP BY s.firma_id, s.angajat_id, s.id, s.status_pachet
+        """), {"data": data})
+        result = {}
+        for row in r:
+            result.setdefault(row[0], {})[row[1]] = {
+                "servire_id": row[2], "status_pachet": row[3], "produse": row[4]
+            }
+        return result
+
+
 def get_angajati_serviti_azi(firma_id, data):
     """
     Returneaza dict { angajat_id: [produse servite] } pentru firma si data data.
