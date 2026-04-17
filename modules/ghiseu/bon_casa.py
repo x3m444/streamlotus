@@ -51,12 +51,14 @@ def show(data_azi):
                     f"📦 {label_buf}\n({disponibil} disponibile)",
                     key=f"bon_buf_{tip}", use_container_width=True, type="primary"
                 ):
-                    ok = db.distribuie_din_buffer(data_azi, tip)
-                    if ok:
-                        st.success(f"Servit din buffer: {TIP_ETICHETE_BUF.get(tip, tip)}")
-                        st.rerun()
-                    else:
-                        st.error("Buffer epuizat!")
+                    st.session_state.bon_buffer.append({
+                        "label": f"📦 {label_buf}",
+                        "produse": [{"nume_produs": p['nume'], "cantitate": 1,
+                                     "din_nevandut": False} for p in comp[tip]],
+                        "din_buffer": True,
+                        "tip_meniu": tip,
+                    })
+                    st.rerun()
         st.divider()
 
     if not gatite:
@@ -141,8 +143,16 @@ def show(data_azi):
         col_conf, col_clear = st.columns(2)
         with col_conf:
             if st.button("✅ Confirmă Servirea", type="primary", use_container_width=True):
-                toate_produsele = [p for g in st.session_state.bon_buffer for p in g['produse']]
-                db.save_servire(data_azi, 'bon_casa', toate_produsele)
+                grupuri_buffer  = [g for g in st.session_state.bon_buffer if g.get('din_buffer')]
+                grupuri_normale = [g for g in st.session_state.bon_buffer if not g.get('din_buffer')]
+
+                if grupuri_normale:
+                    produse_normale = [p for g in grupuri_normale for p in g['produse']]
+                    db.save_servire(data_azi, 'bon_casa', produse_normale)
+
+                for g in grupuri_buffer:
+                    db.distribuie_din_buffer(data_azi, g['tip_meniu'])
+
                 st.session_state.bon_buffer = []
                 st.success("Servit!")
                 st.rerun()
