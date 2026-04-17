@@ -339,9 +339,12 @@ def show():
                 inactivi_ang = [a for a in toti if not a["activ"]]
 
                 nr_activi_str = f"{len(activi_ang)} angajați activi" if tip_f in ("ghiseu", "ghiseu_livrare") else ""
+                contact_str = firma.get("telefon") or ""
                 titlu_exp = f"{activ_icon} {firma['nume_firma']} — {TIPURI_CONTRACT.get(firma['tip_contract'], '')}"
                 if nr_activi_str:
                     titlu_exp += f"  |  👥 {nr_activi_str}"
+                if contact_str and not contact_str.startswith("firma_"):
+                    titlu_exp += f"  |  📞 {contact_str}"
 
                 with st.expander(titlu_exp):
                     ce1, ce2, ce3, ce4, ce5 = st.columns([2, 2, 2, 1, 1])
@@ -363,8 +366,23 @@ def show():
                         nou_cd = ce4.number_input("Cant. def.:", min_value=1,
                                                   value=int(firma.get("cantitate_default", 0) or 1),
                                                   key=f"edit_cd_{fid}")
-                    if ce5.button("💾 Save", key=f"save_f_{fid}", use_container_width=True):
+                    ct1, ct2 = st.columns(2)
+                    nou_tel = ct1.text_input(
+                        "📞 Telefon / persoană contact:",
+                        value=firma.get("telefon", "") or "",
+                        key=f"edit_tel_{fid}",
+                        placeholder="ex: 0740 123 456 — Ion Popescu"
+                    )
+                    nou_adr = ct2.text_input(
+                        "📍 Adresa de livrare:",
+                        value=firma.get("adresa", "") or "",
+                        key=f"edit_adr_{fid}",
+                        placeholder="ex: Str. Școlii nr. 5, Mahmudia"
+                    )
+
+                    if st.button("💾 Salvează", key=f"save_f_{fid}", use_container_width=True, type="primary"):
                         db.update_firma(fid, nou_n, nou_tc, firma["activ"], nou_tip_f, nou_cd)
+                        db.update_client_firma(fid, nou_tel, nou_adr)
                         st.success("Salvat!")
                         st.rerun()
 

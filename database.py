@@ -551,15 +551,18 @@ def get_all_firme(doar_active=True):
     engine = get_engine()
     with engine.connect() as conn:
         query = """
-            SELECT id, nume_firma, tip_contract, activ,
-                   COALESCE(tip_firma, 'ghiseu')    AS tip_firma,
-                   COALESCE(cantitate_default, 0)   AS cantitate_default,
-                   client_id
-            FROM firme
+            SELECT f.id, f.nume_firma, f.tip_contract, f.activ,
+                   COALESCE(f.tip_firma, 'ghiseu')    AS tip_firma,
+                   COALESCE(f.cantitate_default, 0)   AS cantitate_default,
+                   f.client_id,
+                   cl.telefon                         AS telefon,
+                   cl.adresa_principala               AS adresa
+            FROM firme f
+            LEFT JOIN clienti cl ON cl.id = f.client_id
         """
         if doar_active:
-            query += " WHERE activ = TRUE"
-        query += " ORDER BY tip_firma, nume_firma"
+            query += " WHERE f.activ = TRUE"
+        query += " ORDER BY f.tip_firma, f.nume_firma"
         return [dict(r._mapping) for r in conn.execute(text(query))]
 
 
@@ -590,16 +593,19 @@ def get_firme_livrare(doar_active=True):
     engine = get_engine()
     with engine.connect() as conn:
         query = """
-            SELECT id, nume_firma, tip_contract, activ,
-                   COALESCE(tip_firma, 'ghiseu')  AS tip_firma,
-                   COALESCE(cantitate_default, 0) AS cantitate_default,
-                   client_id
-            FROM firme
-            WHERE COALESCE(tip_firma, 'ghiseu') != 'ghiseu'
+            SELECT f.id, f.nume_firma, f.tip_contract, f.activ,
+                   COALESCE(f.tip_firma, 'ghiseu')  AS tip_firma,
+                   COALESCE(f.cantitate_default, 0) AS cantitate_default,
+                   f.client_id,
+                   cl.telefon                       AS telefon,
+                   cl.adresa_principala             AS adresa
+            FROM firme f
+            LEFT JOIN clienti cl ON cl.id = f.client_id
+            WHERE COALESCE(f.tip_firma, 'ghiseu') != 'ghiseu'
         """
         if doar_active:
-            query += " AND activ = TRUE"
-        query += " ORDER BY tip_firma, nume_firma"
+            query += " AND f.activ = TRUE"
+        query += " ORDER BY f.tip_firma, f.nume_firma"
         return [dict(r._mapping) for r in conn.execute(text(query))]
 
 
@@ -705,6 +711,17 @@ def update_firma(firma_id, nume_firma, tip_contract, activ, tip_firma='ghiseu', 
             WHERE id=:id
         """), {"n": nume_firma, "t": tip_contract, "a": activ,
                "tf": tip_firma, "cd": cantitate_default, "id": firma_id})
+
+
+def update_client_firma(firma_id, telefon, adresa):
+    """Actualizeaza datele de contact ale clientului asociat firmei."""
+    st.cache_data.clear()
+    engine = get_engine()
+    with engine.begin() as conn:
+        conn.execute(text("""
+            UPDATE clienti SET telefon=:t, adresa_principala=:a
+            WHERE id = (SELECT client_id FROM firme WHERE id=:fid)
+        """), {"t": telefon, "a": adresa, "fid": firma_id})
 
 
 @st.cache_data(ttl=300)
