@@ -46,7 +46,7 @@ def show_menu_editor():
             with c3: sel_f2_2 = st.selectbox("Felul 2 (B):", f2_opts, format_func=format_p, key="plan_f2b")
             with c4: sel_acc = st.selectbox("Salată/Acc.:", acc_opts, format_func=format_p, key="plan_acc")
 
-            if st.button("💾 Salvează Plan Prânz", use_container_width=True):
+            if st.button("💾 Salvează Plan Prânz", width="stretch"):
                 if sel_f1 and sel_f2_1 and sel_f2_2 and sel_acc:
                     id_uri = [sel_f1['id'], sel_f2_1['id'], sel_f2_2['id'], sel_acc['id']]
                     db.salveaza_planificare(data_plan, id_uri, tip_plan="pranz")
@@ -71,7 +71,7 @@ def show_menu_editor():
             with c2: 
                 sel_sal_c = st.selectbox("🥗 Salată (Cină):", salate_options_cina, format_func=format_p, key="plan_sal_c_only")
             
-            if st.button("💾 Salvează Plan Cină", use_container_width=True):
+            if st.button("💾 Salvează Plan Cină", width="stretch"):
                 # Validăm să fie ambele selectate
                 if sel_f2_c and sel_sal_c:
                     # Salvăm ID-urile în baza de date cu tip_plan="cina"
@@ -87,7 +87,7 @@ def show_menu_editor():
             sw_opts = [p for p in toate if p['categorie'] == 'sandwich']
             sel_sw_zi = st.multiselect("Ce sandwich-uri avem azi?", sw_opts, format_func=lambda x: x['nume'], key="plan_sw")
             
-            if st.button("💾 Salvează Plan Sandwich", use_container_width=True):
+            if st.button("💾 Salvează Plan Sandwich", width="stretch"):
                 if sel_sw_zi:
                     db.salveaza_planificare(data_plan, [s['id'] for s in sel_sw_zi], tip_plan="sandwich")
                     st.success("Planificat: Sandwich-uri ✅")
@@ -205,7 +205,7 @@ def show_menu_editor():
                 data=excel_file,
                 file_name=f"Meniu_Lotus_Landscape_{zile_sapt[0].strftime('%d_%m')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
+                width="stretch"
             )
         except Exception as e:
             st.error(f"Eroare la generare: {e}")
@@ -238,7 +238,7 @@ def show_menu_editor():
                 prod_ales = st.selectbox("Alege produsul:", m_p, format_func=lambda x: x['nume'], key="sel_p_final")
                 qty_aleasa = st.number_input("Cantitate:", min_value=1, step=1, value=1, key="qty_p_final")
                 
-                if st.button("➕ Adaugă în Lot", use_container_width=True, key="btn_add_p"):
+                if st.button("➕ Adaugă în Lot", width="stretch", key="btn_add_p"):
                     existent = next((item for item in st.session_state.buffer_pranz if item["id"] == prod_ales['id']), None)
                     if existent:
                         existent['cantitate'] += qty_aleasa
@@ -265,7 +265,7 @@ def show_menu_editor():
 # ... (partea de selector și buffer rămâne la fel)
 
 # 3. Butonul Final de Lansare
-                if st.button("🚀 Confirmă și Salvează Lot", type="primary", use_container_width=True):
+                if st.button("🚀 Confirmă și Salvează Lot", type="primary", width="stretch"):
                     # CALCULĂM TOTALUL REAL AL LOTULUI
                     total_lot = sum(item['cantitate'] * item['pret'] for item in st.session_state.buffer_pranz)
                     
@@ -302,7 +302,7 @@ def show_menu_editor():
                 
                 qty_aleasa_c = st.number_input("Nr. porții:", min_value=1, step=1, value=1, key="qty_cina_val_v3")
                 
-                if st.button("➕ Adaugă la Lot Cină", key="btn_add_cina_v3", use_container_width=True):
+                if st.button("➕ Adaugă la Lot Cină", key="btn_add_cina_v3", width="stretch"):
                     existent = next((item for item in st.session_state.buffer_cina if item["id"] == prod_ales_c['id']), None)
                     if existent:
                         existent['cantitate'] += qty_aleasa_c
@@ -327,7 +327,7 @@ def show_menu_editor():
                             st.rerun()
 
                     # 3. Salvare Finală
-                    if st.button("🚀 Confirmă Producție Cină", type="primary", use_container_width=True):
+                    if st.button("🚀 Confirmă Producție Cină", type="primary", width="stretch"):
                         if st.session_state.buffer_cina:
                             # CALCULUL: Acum ambele folosesc 'pret', deci va funcționa!
                             total_cina = sum(item['cantitate'] * item.get('pret', 0) for item in st.session_state.buffer_cina)
@@ -347,7 +347,7 @@ def show_menu_editor():
                             st.success(f"✅ Cina a fost salvată! (Total: {total_cina:.2f} lei)")
                             st.rerun()
 
-                    if st.button("🗑️ Golește lista", key="clear_cina_all_v3", use_container_width=True):
+                    if st.button("🗑️ Golește lista", key="clear_cina_all_v3", width="stretch"):
                         st.session_state.buffer_cina = []
                         st.rerun()
             else:
@@ -375,7 +375,7 @@ def show_menu_editor():
                     with col_buc:
                         bucati = st.number_input("Bucăți:", 1, 500, step=1, key="sw_qty")
 
-                    submitted = st.form_submit_button("🚀 Lansează Comanda", use_container_width=True)
+                    submitted = st.form_submit_button("🚀 Lansează Comanda", width="stretch")
 
                                         # ... (restul codului până la submitted)
                     if submitted:
@@ -448,7 +448,7 @@ def show_menu_editor():
                         st.session_state.puffer.pop(i)
                         st.rerun()
                 
-                if st.button(f"🚀 Lansează {tip_spec.upper()}", use_container_width=True, type="primary"):
+                if st.button(f"🚀 Lansează {tip_spec.upper()}", width="stretch", type="primary"):
                     if not desc_spec: 
                         st.error("⚠️ Lipsește descrierea!")
                     elif not st.session_state.puffer:
@@ -491,7 +491,7 @@ def show_menu_editor():
                     # Folosim value=None pentru a avea placeholder text curat
                     pret_n = st.number_input("Preț (RON)", min_value=0.0, step=0.5, value=None, placeholder="Introduceți prețul...")
                 
-                submit_add = st.form_submit_button("Salvează în Nomenclator", use_container_width=True)
+                submit_add = st.form_submit_button("Salvează în Nomenclator", width="stretch")
 
             if submit_add:
                 if nume_n and cat_n and pret_n is not None:
@@ -533,12 +533,12 @@ def show_menu_editor():
                     "șterge": st.column_config.CheckboxColumn("Elimină?", help="Bifează pentru a șterge produsul")
                 },
                 hide_index=True,
-                use_container_width=True,
+                width="stretch",
                 key="nomenclator_editor"
             )
 
             # Buton pentru salvarea tuturor modificărilor (Update + Delete)
-            if st.button("💾 Salvează Modificările (Editări și Ștergeri)", use_container_width=True, type="primary"):
+            if st.button("💾 Salvează Modificările (Editări și Ștergeri)", width="stretch", type="primary"):
                 # 1. Identificăm rândurile de șters
                 ids_de_sters = edited_data[edited_data["șterge"] == True]["id"].tolist()
                 
@@ -564,7 +564,7 @@ def show_menu_editor():
                 data=excel_data,
                 file_name=f"Nomenclator_{date.today().strftime('%d_%m_%Y')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
+                width="stretch"
             )
         else:
             st.info("Nomenclatorul este gol.")
@@ -733,12 +733,12 @@ def show_menu_editor():
                     with col_dreapta:
                         st.write("") # Spațiere
                         # Putem adăuga un buton de vizualizare rapidă sau print dacă e cazul
-                        if st.button("Anulează", key=f"admin_cancel_{cz['id']}", use_container_width=True):
+                        if st.button("Anulează", key=f"admin_cancel_{cz['id']}", width="stretch"):
                             # Exemplu: dacă vrei să-i pui status 'anulat' în loc să o ștergi direct
                             db.update_status_comanda(engine, cz['id'], 'anulat')
                             st.rerun()
                         
-                        if st.button("🗑️ Șterge", key=f"admin_del_{cz['id']}", use_container_width=True):
+                        if st.button("🗑️ Șterge", key=f"admin_del_{cz['id']}", width="stretch"):
                             if db.delete_comanda(cz['id']):
                                 st.rerun()
 

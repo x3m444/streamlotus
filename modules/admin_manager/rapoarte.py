@@ -201,7 +201,7 @@ def show(data_plan):
                     data=excel_cantitati,
                     file_name=f"Cantitati_{data_plan.strftime('%d%m%Y')}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True,
+                    width="stretch",
                 )
             with col_exp2:
                 excel_financiar = utils.export_raport_excel(
@@ -215,7 +215,7 @@ def show(data_plan):
                     data=excel_financiar,
                     file_name=f"Financiar_{data_plan.strftime('%d%m%Y')}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True,
+                    width="stretch",
                 )
 
         # -------------------------------------------------------
@@ -260,7 +260,7 @@ def show(data_plan):
                                 except Exception:
                                     st.write(f"• {linie}")
                     with col_dreapta:
-                        if st.button("🗑️ Șterge", key=f"admin_del_lot_{cz['id']}", use_container_width=True):
+                        if st.button("🗑️ Șterge", key=f"admin_del_lot_{cz['id']}", width="stretch"):
                             if db.delete_comanda(cz['id']):
                                 st.rerun()
 
@@ -302,10 +302,10 @@ def show(data_plan):
                         if cz['tip_comanda'] == 'livrare':
                             st.caption(f"📍 {cz.get('adresa_principala', 'N/A')}")
                     with col_dreapta:
-                        if st.button("Anulează", key=f"admin_cancel_{cz['id']}", use_container_width=True):
+                        if st.button("Anulează", key=f"admin_cancel_{cz['id']}", width="stretch"):
                             db.update_status_comanda(engine, cz['id'], 'anulat')
                             st.rerun()
-                        if st.button("🗑️ Șterge", key=f"admin_del_{cz['id']}", use_container_width=True):
+                        if st.button("🗑️ Șterge", key=f"admin_del_{cz['id']}", width="stretch"):
                             if db.delete_comanda(cz['id']):
                                 st.rerun()
 
@@ -385,5 +385,5 @@ def show(data_plan):
                     data=excel_raport,
                     file_name=f"Raport_{d_start.strftime('%d%m%Y')}_{d_end.strftime('%d%m%Y')}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True,
+                    width="stretch",
                 )

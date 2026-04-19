@@ -72,7 +72,7 @@ def show(data_selectata, engine):
                             if st.button(
                                 f"✅ Gata {nume}",
                                 key=f"btn_gatit_{nume}",
-                                use_container_width=True,
+                                width="stretch",
                             ):
                                 db.update_status_batch(engine, data_selectata, nume, "gatit")
                                 st.rerun()
@@ -80,7 +80,7 @@ def show(data_selectata, engine):
                             if st.button(
                                 f"🔄 Reset {nume}",
                                 key=f"btn_reset_{nume}",
-                                use_container_width=True
+                                width="stretch"
                             ):
                                 db.update_status_batch(engine, data_selectata, nume, "nou")
                                 st.rerun()
@@ -128,7 +128,7 @@ def show(data_selectata, engine):
                         if st.button(
                             f"✅ Gata {nume}",
                             key=f"btn_spec_gatit_{nume}",
-                            use_container_width=True,
+                            width="stretch",
                         ):
                             db.update_status_batch(engine, data_selectata, nume, "gatit")
                             st.rerun()
@@ -136,7 +136,7 @@ def show(data_selectata, engine):
                         if st.button(
                             f"🔄 Reset {nume}",
                             key=f"btn_spec_reset_{nume}",
-                            use_container_width=True
+                            width="stretch"
                         ):
                             db.update_status_batch(engine, data_selectata, nume, "nou")
                             st.rerun()

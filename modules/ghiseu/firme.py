@@ -99,7 +99,7 @@ def show(data_azi):
                 "Angajat nou:", key=f"new_ang_gh_{firma_id}",
                 placeholder="Nume și prenume", label_visibility="collapsed"
             )
-            if col_btn.button("➕", key=f"add_ang_gh_{firma_id}", use_container_width=True):
+            if col_btn.button("➕", key=f"add_ang_gh_{firma_id}", width="stretch"):
                 if nou.strip():
                     db.add_angajat(firma_id, nou.strip())
                     st.rerun()
@@ -141,7 +141,7 @@ def show(data_azi):
                         elif status == "ambalat":
                             col_nev.markdown(":green[📦 Gata!]")
                             if col_btn1.button("🚀 Ridicat", key=f"ridicat_{aid}",
-                                               use_container_width=True, type="primary"):
+                                               width="stretch", type="primary"):
                                 db.update_status_pachet(pachet_info["servire_id"], "ridicat")
                                 st.rerun()
                     else:
@@ -189,7 +189,7 @@ def show(data_azi):
 
                         if optiuni_lista:
                             if col_btn1.button("🍽️ La masă", key=f"masa_{aid}",
-                                               use_container_width=True, type="primary"):
+                                               width="stretch", type="primary"):
                                 db.save_servire(data_azi, "firma", _produse(meniu_ales, nev_ales),
                                                 firma_id=firma_id, angajat_id=aid, tip_ridicare="la_masa")
                                 st.rerun()
@@ -197,7 +197,7 @@ def show(data_azi):
                             tip_meniu_sel = optiuni_meniu.get(meniu_ales, {}).get("tip_meniu")
                             buf_dispon    = buffer_azi.get(tip_meniu_sel, {}).get("disponibil", 0) if tip_meniu_sel else 0
                             pachet_label  = f"📦 Pachet {'(buf)' if buf_dispon > 0 else ''}"
-                            if col_btn2.button(pachet_label, key=f"pachet_{aid}", use_container_width=True):
+                            if col_btn2.button(pachet_label, key=f"pachet_{aid}", width="stretch"):
                                 if buf_dispon > 0:
                                     ok = db.distribuie_din_buffer(data_azi, tip_meniu_sel,
                                                                   firma_id=firma_id, angajat_id=aid)
@@ -210,7 +210,7 @@ def show(data_azi):
                                 st.rerun()
 
                     if col_conc.button("🔴", key=f"conc_{aid}",
-                                       use_container_width=True, help="Concediu"):
+                                       width="stretch", help="Concediu"):
                         db.toggle_angajat(aid, False)
                         st.rerun()
 
@@ -220,6 +220,6 @@ def show(data_azi):
                     for ang in inactivi:
                         ca, cb = st.columns([5, 1])
                         ca.write(f"💤 {ang['nume_angajat']}")
-                        if cb.button("🟢", key=f"act_{ang['id']}", use_container_width=True, help="Reactivează"):
+                        if cb.button("🟢", key=f"act_{ang['id']}", width="stretch", help="Reactivează"):
                             db.toggle_angajat(ang["id"], True)
                             st.rerun()

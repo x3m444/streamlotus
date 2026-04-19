@@ -397,7 +397,7 @@ def show_receptie():
     st.divider()
 
     # 3. BUTONUL FINAL (Unic și Complet)
-    if st.button("💾 SALVEAZĂ COMANDA FINALĂ", type="primary", use_container_width=True):
+    if st.button("💾 SALVEAZĂ COMANDA FINALĂ", type="primary", width="stretch"):
         if not st.session_state.buffer_comanda:
             st.warning("⚠️ Comanda nu are produse!")
         else:

@@ -68,7 +68,7 @@ def show(data_azi):
             with col:
                 if st.button(
                     f"📦 {label_buf}\n({disponibil} disponibile)",
-                    key=f"bon_buf_{tip}", use_container_width=True, type="primary"
+                    key=f"bon_buf_{tip}", width="stretch", type="primary"
                 ):
                     adauga_grup(f"📦 {label_buf}", comp[tip],
                                 din_buffer=True, tip_meniu=tip)
@@ -84,7 +84,7 @@ def show(data_azi):
         disponibil = nume in gatite and stoc.get(nume, {}).get('ramas', 0) > 0
         stare = 'gata' if disponibil else ('⏳ negatit' if nume not in gatite else '❌ epuizat')
         if st.button(f"{icon} {nume}\n({stare})", key=key,
-                     use_container_width=True, disabled=not disponibil):
+                     width="stretch", disabled=not disponibil):
             adauga_grup(f"{icon} {nume}", [produs])
             st.rerun()
 
@@ -106,7 +106,7 @@ def show(data_azi):
         disponibil_v1 = meniu_disponibil(componente_v1)
         label_v1 = " + ".join(p['nume'] for p in componente_v1)
         if st.button(label_v1, key="bon_meniu_v1",
-                     use_container_width=True, disabled=not disponibil_v1):
+                     width="stretch", disabled=not disponibil_v1):
             adauga_grup(f"🍱 {label_v1}", componente_v1)
             st.rerun()
 
@@ -115,7 +115,7 @@ def show(data_azi):
         disponibil_v2 = meniu_disponibil(componente_v2)
         label_v2 = " + ".join(p['nume'] for p in componente_v2)
         if st.button(label_v2, key="bon_meniu_v2",
-                     use_container_width=True, disabled=not disponibil_v2):
+                     width="stretch", disabled=not disponibil_v2):
             adauga_grup(f"🍱 {label_v2}", componente_v2)
             st.rerun()
 
@@ -138,7 +138,7 @@ def show(data_azi):
                 label_solo = " + ".join(p['nume'] for p in componente)
                 stare = 'gata' if disponibil else ('⏳ negatit' if produs_ref['nume'] not in gatite else '❌ epuizat')
                 if st.button(f"{icon} {label_solo}\n({stare})", key=key,
-                             use_container_width=True, disabled=not disponibil):
+                             width="stretch", disabled=not disponibil):
                     adauga_grup(f"{icon} {label_solo}", componente)
                     st.rerun()
 
@@ -150,7 +150,7 @@ def show(data_azi):
             qty = grup.get('cantitate', 1)
             qty_str = f" — x{qty}" if qty > 1 else ""
             if st.button(f"🗑️ {grup['label']}{qty_str}", key=f"del_bon_{i}",
-                         use_container_width=True):
+                         width="stretch"):
                 if qty > 1:
                     grup['cantitate'] -= 1
                 else:
@@ -159,7 +159,7 @@ def show(data_azi):
 
         col_conf, col_clear = st.columns(2)
         with col_conf:
-            if st.button("✅ Confirmă Servirea", type="primary", use_container_width=True):
+            if st.button("✅ Confirmă Servirea", type="primary", width="stretch"):
                 grupuri_buffer  = [g for g in st.session_state.bon_buffer if g.get('din_buffer')]
                 grupuri_normale = [g for g in st.session_state.bon_buffer if not g.get('din_buffer')]
 
@@ -178,6 +178,6 @@ def show(data_azi):
                 st.success("Servit!")
                 st.rerun()
         with col_clear:
-            if st.button("🗑️ Golește", use_container_width=True):
+            if st.button("🗑️ Golește", width="stretch"):
                 st.session_state.bon_buffer = []
                 st.rerun()

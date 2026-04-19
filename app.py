@@ -44,10 +44,10 @@ else:
 
     # ── Sidebar utilizator autentificat ───────────────────────
     st.sidebar.markdown(f"**{user['username']}** — {auth.ROL_LABEL.get(rol, rol)}")
-    if st.sidebar.button("🚪 Deconectare", use_container_width=True):
+    if st.sidebar.button("🚪 Deconectare", width="stretch"):
         auth.logout()
 
-    if st.sidebar.button("📖 Manual", use_container_width=True):
+    if st.sidebar.button("📖 Manual", width="stretch"):
         st.session_state["show_manual"] = not st.session_state.get("show_manual", False)
 
     if st.session_state.get("show_manual", False):

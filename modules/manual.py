@@ -31,7 +31,7 @@ def show_manual():
             Bucatarie -> Ghiseu    [label="stoc gătit\n+ buffer"]
             Bucatarie -> Livrare   [label="comenzi ambalate"]
         }
-        """, use_container_width=True)
+        """, width="stretch")
 
         col1, col2, col3 = st.columns(3)
         with col1:

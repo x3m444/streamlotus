@@ -27,9 +27,9 @@ def _card_lot(lot, key_prefix, label="Lot"):
             f"{lot['status'].upper()}{detalii_str}"
         )
         edit   = c_ed.button("✏️ Edit", key=f"edit_{key_prefix}_{comanda_id}",
-                              use_container_width=True)
+                              width="stretch")
         if c_del.button("🗑️ Șterge", key=f"del_{key_prefix}_{comanda_id}",
-                        use_container_width=True):
+                        width="stretch"):
             db.delete_comanda(comanda_id)
             st.rerun()
         return edit
@@ -85,7 +85,7 @@ def show(data_plan):
                                           format_func=lambda x: x["nume"], key="sel_p_final")
                 qty_aleasa = st.number_input("Cantitate:", min_value=1, step=1, value=1, key="qty_p_final")
 
-                if st.button("➕ Adaugă în Lot", use_container_width=True, key="btn_add_p"):
+                if st.button("➕ Adaugă în Lot", width="stretch", key="btn_add_p"):
                     ex = next((i for i in st.session_state.buffer_pranz if i["id"] == prod_ales["id"]), None)
                     if ex:
                         ex["cantitate"] += qty_aleasa
@@ -102,7 +102,7 @@ def show(data_plan):
                         c_txt.write(f"**{item['cantitate']}** x {item['nume']}")
                         if c_del.button("❌", key=f"del_p_f_{i}"):
                             st.session_state.buffer_pranz.pop(i)
-                    if st.button("🚀 Confirmă și Salvează Lot Prânz", type="primary", use_container_width=True):
+                    if st.button("🚀 Confirmă și Salvează Lot Prânz", type="primary", width="stretch"):
                         total_lot = sum(i["cantitate"] * i["pret"] for i in st.session_state.buffer_pranz)
                         db.save_comanda_finala(999, st.session_state.buffer_pranz, total_lot,
                                                "INTERN", "12:00", "Lot Producție Prânz",
@@ -131,7 +131,7 @@ def show(data_plan):
                                              format_func=lambda x: x["nume"], key="sel_cina_prod_v3")
                 qty_aleasa_c = st.number_input("Nr. porții:", min_value=1, step=1, value=1, key="qty_cina_val_v3")
 
-                if st.button("➕ Adaugă la Lot Cină", key="btn_add_cina_v3", use_container_width=True):
+                if st.button("➕ Adaugă la Lot Cină", key="btn_add_cina_v3", width="stretch"):
                     ex = next((i for i in st.session_state.buffer_cina if i["id"] == prod_ales_c["id"]), None)
                     if ex:
                         ex["cantitate"] += qty_aleasa_c
@@ -150,7 +150,7 @@ def show(data_plan):
                             st.session_state.buffer_cina.pop(i)
                     col_confirm, col_clear = st.columns(2)
                     with col_confirm:
-                        if st.button("🚀 Confirmă Producție Cină", type="primary", use_container_width=True):
+                        if st.button("🚀 Confirmă Producție Cină", type="primary", width="stretch"):
                             total_cina = sum(i["cantitate"] * i.get("pret", 0) for i in st.session_state.buffer_cina)
                             db.save_comanda_finala(999, st.session_state.buffer_cina, total_cina,
                                                    "INTERN", "19:00", "Lot Producție Cină",
@@ -158,7 +158,7 @@ def show(data_plan):
                             st.session_state.buffer_cina = []
                             st.rerun()
                     with col_clear:
-                        if st.button("🗑️ Golește lista", key="clear_cina_all_v3", use_container_width=True):
+                        if st.button("🗑️ Golește lista", key="clear_cina_all_v3", width="stretch"):
                             st.session_state.buffer_cina = []
 
     # ── SPECIAL / EVENIMENT ───────────────────────────────────
@@ -186,7 +186,7 @@ def show(data_plan):
         with c3: q_sel = st.number_input("Cant:", min_value=1, value=1, key="q_spec")
         with c4:
             st.write("##")
-            if st.button("➕ Adaugă", key="btn_add_spec", use_container_width=True):
+            if st.button("➕ Adaugă", key="btn_add_spec", width="stretch"):
                 if p_sel:
                     st.session_state.buffer_special.append({
                         "id": p_sel["id"], "nume": p_sel["nume"],
@@ -200,7 +200,7 @@ def show(data_plan):
                 col_t.write(f"✅ {item['nume']} x {item['cantitate']} ({item['pret']} lei/buc)")
                 if col_r.button("🗑️", key=f"del_spec_{i}"):
                     st.session_state.buffer_special.pop(i)
-            if st.button(f"🚀 Lansează {tip_spec.upper()}", use_container_width=True, type="primary"):
+            if st.button(f"🚀 Lansează {tip_spec.upper()}", width="stretch", type="primary"):
                 if not desc_spec:
                     st.error("⚠️ Lipsește descrierea!")
                 else:

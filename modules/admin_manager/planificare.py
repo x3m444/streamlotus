@@ -48,7 +48,7 @@ def show(data_plan):
         with c3: sel_f2_2 = st.selectbox("Felul 2 (B):", f2_opts, format_func=format_p, key="plan_f2b")
         with c4: sel_acc = st.selectbox("Salată/Acc.:", acc_opts, format_func=format_p, key="plan_acc")
 
-        if st.button("💾 Salvează Plan Prânz", use_container_width=True, key="btn_salv_pranz"):
+        if st.button("💾 Salvează Plan Prânz", width="stretch", key="btn_salv_pranz"):
             if sel_f1 and sel_f2_1 and sel_f2_2 and sel_acc:
                 db.salveaza_planificare(
                     data_plan,
@@ -81,7 +81,7 @@ def show(data_plan):
                 key="plan_sal_c_only"
             )
 
-        if st.button("💾 Salvează Plan Cină", use_container_width=True, key="btn_salv_cina"):
+        if st.button("💾 Salvează Plan Cină", width="stretch", key="btn_salv_cina"):
             if sel_f2_c and sel_sal_c:
                 db.salveaza_planificare(data_plan, [sel_f2_c['id'], sel_sal_c['id']], tip_plan="cina")
                 st.success(f"Cina pentru {nume_zi_ro} a fost salvată! ✅")
@@ -101,7 +101,7 @@ def show(data_plan):
             key="plan_sw"
         )
 
-        if st.button("💾 Salvează Plan Sandwich", use_container_width=True, key="btn_salv_sw"):
+        if st.button("💾 Salvează Plan Sandwich", width="stretch", key="btn_salv_sw"):
             if sel_sw_zi:
                 db.salveaza_planificare(data_plan, [s['id'] for s in sel_sw_zi], tip_plan="sandwich")
                 st.success("Planificat: Sandwich-uri ✅")
@@ -203,7 +203,7 @@ def show(data_plan):
             data=excel_file,
             file_name=f"Meniu_Lotus_{zile_sapt[0].strftime('%d_%m')}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True
+            width="stretch"
         )
     except Exception as e:
         st.error(f"Eroare la generare Excel: {e}")

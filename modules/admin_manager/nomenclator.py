@@ -43,7 +43,7 @@ def show():
                     value=None, placeholder="Introduceți prețul..."
                 )
 
-            submit_add = st.form_submit_button("Salvează în Nomenclator", use_container_width=True)
+            submit_add = st.form_submit_button("Salvează în Nomenclator", width="stretch")
 
         if submit_add:
             if nume_n and cat_n and pret_n is not None:
@@ -157,7 +157,7 @@ def show():
                                        ", ".join(r["Denumire"] for r in duplicate))
 
                         if noi:
-                            if st.button(f"✅ Importă {len(noi)} produs(e) noi", type="primary", use_container_width=True):
+                            if st.button(f"✅ Importă {len(noi)} produs(e) noi", type="primary", width="stretch"):
                                 for r in noi:
                                     db.add_produs(r["Denumire"], r["Categorie"], r["Pret"])
                                 st.success(f"✅ {len(noi)} produse importate cu succes!")
@@ -197,11 +197,11 @@ def show():
             "șterge":       st.column_config.CheckboxColumn("Elimină?", help="Bifează pentru ștergere"),
         },
         hide_index=True,
-        use_container_width=True,
+        width="stretch",
         key="nomenclator_editor"
     )
 
-    if st.button("💾 Salvează Modificările", use_container_width=True, type="primary"):
+    if st.button("💾 Salvează Modificările", width="stretch", type="primary"):
         ids_de_sters = edited_data[edited_data["șterge"] == True]["id"].tolist()
 
         for index, row in edited_data.iterrows():
@@ -228,5 +228,5 @@ def show():
         data=excel_data,
         file_name=f"Nomenclator_{date.today().strftime('%d_%m_%Y')}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True
+        width="stretch"
     )

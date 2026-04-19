@@ -67,7 +67,7 @@ def show(data_azi):
             )
             serviri_form.append({'nume_produs': p['nume'], 'cantitate': qty, 'din_nevandut': False})
 
-        if st.form_submit_button("✅ Confirmă Servire Eveniment", use_container_width=True, type="primary"):
+        if st.form_submit_button("✅ Confirmă Servire Eveniment", width="stretch", type="primary"):
             produse_de_salvat = [p for p in serviri_form if p['cantitate'] > 0]
             if produse_de_salvat:
                 db.save_servire(data_azi, 'eveniment', produse_de_salvat, comanda_ref_id=lot_sel['id'])

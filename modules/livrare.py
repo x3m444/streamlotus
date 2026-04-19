@@ -117,7 +117,7 @@ def _render_card_livrare(cmd, actiune):
             if st.button(
                 "🚚 Am preluat comanda",
                 key=f"preluat_{cmd['id']}",
-                use_container_width=True
+                width="stretch"
             ):
                 db.update_status_comanda(engine, cmd['id'], 'pedrum')
                 st.rerun()
@@ -126,7 +126,7 @@ def _render_card_livrare(cmd, actiune):
             if st.button(
                 "✅ Livrat!",
                 key=f"livrat_{cmd['id']}",
-                use_container_width=True
+                width="stretch"
             ):
                 db.update_status_comanda(engine, cmd['id'], 'livrat')
                 st.rerun()

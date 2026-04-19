@@ -56,7 +56,7 @@ def show(data_selectata):
                 with col_btn:
                     st.write("")
                     st.write("")
-                    if st.button("💾 Salvează", key=f"btn_nev_{nume}", use_container_width=True):
+                    if st.button("💾 Salvează", key=f"btn_nev_{nume}", width="stretch"):
                         if qty > 0:
                             db.declara_nevandut(data_selectata, nume, qty)
                             st.success(f"Salvat: {qty} porții {nume}")

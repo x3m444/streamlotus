@@ -98,9 +98,9 @@ def show():
                         f"🚗 {info['sofer']}  |  🕐 {info['ora']}  |  "
                         f"💰 {info['total']:.0f} lei  |  {info['detalii'] or ''}"
                     )
-                    if c_ed.button("✏️ Edit", key=f"edit_btn_{fid}", use_container_width=True):
+                    if c_ed.button("✏️ Edit", key=f"edit_btn_{fid}", width="stretch"):
                         st.session_state["edit_lansare"].add(fid)
-                    if c_del.button("🗑️", key=f"del_btn_{fid}", use_container_width=True,
+                    if c_del.button("🗑️", key=f"del_btn_{fid}", width="stretch",
                                     help="Șterge lansarea"):
                         db.delete_comanda(info["comanda_id"])
                         st.session_state["edit_lansare"].discard(fid)
@@ -152,7 +152,7 @@ def show():
                                                       key=f"gl_ora_{fid}", label_visibility="collapsed")
 
                         if c_btn.button("🚀 Lansează", key=f"gl_btn_{fid}",
-                                        use_container_width=True, type="primary"):
+                                        width="stretch", type="primary"):
                             if meniu_ales not in ("V1", "V2"):
                                 st.error("Nu există plan de meniu pentru această dată.")
                             else:
@@ -212,7 +212,7 @@ def show():
                                                     key=f"lf_ora_{fid}", label_visibility="collapsed")
 
                         if c_btn.button("🚀 Lansează", key=f"lf_btn_{fid}",
-                                        use_container_width=True, type="primary"):
+                                        width="stretch", type="primary"):
                             if not produs_ales:
                                 st.error("Niciun produs sandwich planificat pentru această dată.")
                             else:
@@ -274,7 +274,7 @@ def show():
                         componente = [p for p in [f1_sp, f2_sp, sal_sp] if p]
 
                         if st.button("🚀 Lansează Meniu Special", key=f"sp_btn_{fid}",
-                                     use_container_width=True, type="primary"):
+                                     width="stretch", type="primary"):
                             if not componente:
                                 st.error("Selectează cel puțin un produs.")
                             else:
@@ -312,7 +312,7 @@ def show():
                                            help="Cantitate implicită zilnică")
             c5.write("")
             c5.write("")
-            if c5.button("Adaugă", key="btn_add_firma", use_container_width=True, type="primary"):
+            if c5.button("Adaugă", key="btn_add_firma", width="stretch", type="primary"):
                 if nou_nume.strip():
                     db.add_firma(nou_nume.strip(), nou_contract, nou_tip_f, nou_cant)
                     st.success(f"Firmă adăugată: {nou_nume.strip()}")
@@ -380,7 +380,7 @@ def show():
                         placeholder="ex: Str. Școlii nr. 5, Mahmudia"
                     )
 
-                    if st.button("💾 Salvează", key=f"save_f_{fid}", use_container_width=True, type="primary"):
+                    if st.button("💾 Salvează", key=f"save_f_{fid}", width="stretch", type="primary"):
                         db.update_firma(fid, nou_n, nou_tc, firma["activ"], nou_tip_f, nou_cd)
                         db.update_client_firma(fid, nou_tel, nou_adr)
                         st.success("Salvat!")
@@ -388,12 +388,12 @@ def show():
 
                     col_act, col_dez = st.columns(2)
                     if firma["activ"]:
-                        if col_dez.button("🔴 Dezactivează", key=f"dez_f_{fid}", use_container_width=True):
+                        if col_dez.button("🔴 Dezactivează", key=f"dez_f_{fid}", width="stretch"):
                             db.update_firma(fid, firma["nume_firma"], firma["tip_contract"],
                                             False, tip_f, firma.get("cantitate_default", 0))
                             st.rerun()
                     else:
-                        if col_act.button("🟢 Reactivează", key=f"act_f_{fid}", use_container_width=True):
+                        if col_act.button("🟢 Reactivează", key=f"act_f_{fid}", width="stretch"):
                             db.update_firma(fid, firma["nume_firma"], firma["tip_contract"],
                                             True, tip_f, firma.get("cantitate_default", 0))
                             st.rerun()
@@ -404,7 +404,7 @@ def show():
                         nou_ang = col_inp.text_input("Adaugă angajat:", key=f"new_ang_{fid}",
                                                      placeholder="Nume și prenume",
                                                      label_visibility="collapsed")
-                        if col_btn.button("➕", key=f"btn_ang_{fid}", use_container_width=True):
+                        if col_btn.button("➕", key=f"btn_ang_{fid}", width="stretch"):
                             if nou_ang.strip():
                                 db.add_angajat(fid, nou_ang.strip())
                                 st.rerun()
@@ -412,7 +412,7 @@ def show():
                         for ang in activi_ang:
                             ca, cb = st.columns([5, 1])
                             ca.write(f"👤 {ang['nume_angajat']}")
-                            if cb.button("Concediu", key=f"conc_{ang['id']}", use_container_width=True):
+                            if cb.button("Concediu", key=f"conc_{ang['id']}", width="stretch"):
                                 db.toggle_angajat(ang["id"], False)
                                 st.rerun()
 
@@ -421,7 +421,7 @@ def show():
                             for ang in inactivi_ang:
                                 ca, cb = st.columns([5, 1])
                                 ca.write(f"💤 {ang['nume_angajat']}")
-                                if cb.button("Reactivează", key=f"react_{ang['id']}", use_container_width=True):
+                                if cb.button("Reactivează", key=f"react_{ang['id']}", width="stretch"):
                                     db.toggle_angajat(ang["id"], True)
                                     st.rerun()
 
@@ -471,7 +471,7 @@ def show():
                 label_btn = "✅ Update" if rez_curenta else "Confirmă"
                 btn_type  = "secondary" if rez_curenta else "primary"
                 if c5.button(label_btn, key=f"btn_rez_{fid}",
-                             use_container_width=True, type=btn_type):
+                             width="stretch", type=btn_type):
                     db.save_rezervare_firma(fid, data_azi, qty)
                     st.rerun()
 
@@ -513,6 +513,6 @@ def show():
                 data=excel_firme,
                 file_name=f"Raport_Firme_{data_raport.strftime('%d%m%Y')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True,
+                width="stretch",
                 type="primary",
             )

@@ -67,7 +67,7 @@ def show(data_selectata):
 
             with col_btn:
                 st.write("")
-                if st.button("➕ Adaugă", key=f"buf_add_{tip}", use_container_width=True,
+                if st.button("➕ Adaugă", key=f"buf_add_{tip}", width="stretch",
                              disabled=(qty == 0)):
                     db.add_to_buffer(data_selectata, tip, qty)
                     st.success(f"+{qty} porții {TIP_ETICHETE.get(tip, tip)}")

@@ -128,7 +128,7 @@ def show(data_selectata=None):
             with st.container(border=True):
                 st.markdown(f"**V1** — {nume_f1} + {nume_f2_v1}" + (f" + {nume_salata}" if lista_salate_plan else ""))
                 m_v1 = st.number_input("Porții:", min_value=0, step=1, key="rapid_v1", label_visibility="collapsed")
-                if st.button("➕ Adaugă Meniu V1", key="btn_m_v1_rapide", use_container_width=True, type="primary"):
+                if st.button("➕ Adaugă Meniu V1", key="btn_m_v1_rapide", width="stretch", type="primary"):
                     if m_v1 > 0:
                         adauga_in_buffer(nume_f1, m_v1, pret_f1, "Meniu V1")
                         adauga_in_buffer(nume_f2_v1, m_v1, pret_f2_v1, "Meniu V1")
@@ -139,7 +139,7 @@ def show(data_selectata=None):
             with st.container(border=True):
                 st.markdown(f"**V2** — {nume_f1} + {nume_f2_v2}" + (f" + {nume_salata}" if lista_salate_plan else ""))
                 m_v2 = st.number_input("Porții:", min_value=0, step=1, key="rapid_v2", label_visibility="collapsed")
-                if st.button("➕ Adaugă Meniu V2", key="btn_m_v2_rapide", use_container_width=True, type="primary"):
+                if st.button("➕ Adaugă Meniu V2", key="btn_m_v2_rapide", width="stretch", type="primary"):
                     if m_v2 > 0:
                         adauga_in_buffer(nume_f1, m_v2, pret_f1, "Meniu V2")
                         adauga_in_buffer(nume_f2_v2, m_v2, pret_f2_v2, "Meniu V2")
@@ -154,7 +154,7 @@ def show(data_selectata=None):
             with st.container(border=True):
                 st.markdown(f"**Solo** — {nume_f1}")
                 f1_s = st.number_input("Porții:", min_value=0, step=1, key="rapid_f1", label_visibility="collapsed")
-                if st.button("➕ Adaugă", key="btn_s_f1_rapide", use_container_width=True):
+                if st.button("➕ Adaugă", key="btn_s_f1_rapide", width="stretch"):
                     if f1_s > 0:
                         adauga_in_buffer(nume_f1, f1_s, pret_f1, "Solo")
 
@@ -162,7 +162,7 @@ def show(data_selectata=None):
             with st.container(border=True):
                 st.markdown(f"**Solo** — {nume_f2_v1}" + (f" + {nume_salata}" if lista_salate_plan else ""))
                 f2_v1 = st.number_input("Porții:", min_value=0, step=1, key="rapid_f2v1", label_visibility="collapsed")
-                if st.button("➕ Adaugă", key="btn_s_f2v1_rapide", use_container_width=True):
+                if st.button("➕ Adaugă", key="btn_s_f2v1_rapide", width="stretch"):
                     if f2_v1 > 0:
                         adauga_in_buffer(nume_f2_v1, f2_v1, pret_f2_v1, "Solo")
                         if lista_salate_plan:
@@ -172,7 +172,7 @@ def show(data_selectata=None):
             with st.container(border=True):
                 st.markdown(f"**Solo** — {nume_f2_v2}" + (f" + {nume_salata}" if lista_salate_plan else ""))
                 f2_v2 = st.number_input("Porții:", min_value=0, step=1, key="rapid_f2v2", label_visibility="collapsed")
-                if st.button("➕ Adaugă", key="btn_s_f2v2_rapide", use_container_width=True):
+                if st.button("➕ Adaugă", key="btn_s_f2v2_rapide", width="stretch"):
                     if f2_v2 > 0:
                         adauga_in_buffer(nume_f2_v2, f2_v2, pret_f2_v2, "Solo")
                         if lista_salate_plan:
@@ -230,7 +230,7 @@ def show(data_selectata=None):
             qty_custom = st.number_input("Unități:", min_value=1, step=1, key="q_free_val")
 
         st.divider()
-        if st.button("➕ Adaugă selecția în coș", use_container_width=True):
+        if st.button("➕ Adaugă selecția în coș", width="stretch"):
             if not (f1_sel or f2_sel or s_sel):
                 st.warning("⚠️ Selectează cel puțin un produs!")
             else:
@@ -291,7 +291,7 @@ def show(data_selectata=None):
 
     st.divider()
 
-    if st.button("💾 SALVEAZĂ COMANDA FINALĂ", type="primary", use_container_width=True):
+    if st.button("💾 SALVEAZĂ COMANDA FINALĂ", type="primary", width="stretch"):
         if not st.session_state.buffer_comanda:
             st.warning("⚠️ Comanda nu are produse!")
         else:

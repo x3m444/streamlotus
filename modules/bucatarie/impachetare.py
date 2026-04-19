@@ -33,7 +33,7 @@ def show(data_selectata, engine):
             col_prod.caption(pct['produse'])
             if pct['status_pachet'] == 'astept':
                 if col_btn.button("📦 Ambalat", key=f"amb_{pct['servire_id']}",
-                                  use_container_width=True, type="primary"):
+                                  width="stretch", type="primary"):
                     db.update_status_pachet(pct['servire_id'], 'ambalat')
                     st.rerun()
             else:
@@ -121,7 +121,7 @@ def show(data_selectata, engine):
                     if st.button(
                         "📦 Ambalat!",
                         key=f"pack_{cmd['id']}",
-                        use_container_width=True,
+                        width="stretch",
                     ):
                         db.update_status_comanda(engine, cmd['id'], 'pregatit')
                         st.success(f"Comanda #{cmd['id']} marcată ca PREGĂTITĂ!")
@@ -130,7 +130,7 @@ def show(data_selectata, engine):
                     if st.button(
                         "❌ Anulează",
                         key=f"cancel_{cmd['id']}",
-                        use_container_width=True,
+                        width="stretch",
                         type="primary",
                         help="Stoc insuficient — anulează comanda"
                     ):
@@ -142,6 +142,6 @@ def show(data_selectata, engine):
                         "⏳ Așteaptă",
                         key=f"wait_{cmd['id']}",
                         disabled=True,
-                        use_container_width=True,
+                        width="stretch",
                         help="Asteapta ca bucatarul sa marcheze toate produsele ca gatite"
                     )

@@ -81,7 +81,7 @@ def show():
 
         c4.write("")
         c4.write("")
-        if c4.button("Adaugă", key="btn_add_user", type="primary", use_container_width=True):
+        if c4.button("Adaugă", key="btn_add_user", type="primary", width="stretch"):
             if not nou_user.strip() or not nou_pass.strip():
                 st.error("Username și parola sunt obligatorii.")
             else:
@@ -120,7 +120,7 @@ def show():
                 new_pass = col_pass.text_input("Parolă nouă:", type="password",
                                                key=f"rp_{uid}", placeholder="lasă gol = neschimbat")
                 if col_pass.button("🔑 Resetează parola", key=f"btn_rp_{uid}",
-                                   use_container_width=True):
+                                   width="stretch"):
                     if new_pass.strip():
                         _reset_password(uid, new_pass.strip())
                         st.success("Parolă resetată.")
@@ -133,12 +133,12 @@ def show():
                 col_act.write("")
                 if activ:
                     if col_act.button("🔴 Dezactivează", key=f"dez_{uid}",
-                                      use_container_width=True):
+                                      width="stretch"):
                         _set_activ(uid, False)
                         st.rerun()
                 else:
                     if col_act.button("🟢 Activează", key=f"act_{uid}",
-                                      use_container_width=True):
+                                      width="stretch"):
                         _set_activ(uid, True)
                         st.rerun()
 
@@ -150,7 +150,7 @@ def show():
                     nou_liv = col_liv.selectbox("Livrator:", opt_liv, index=idx,
                                                key=f"liv_sel_{uid}")
                     if col_liv.button("💾 Salvează", key=f"liv_save_{uid}",
-                                      use_container_width=True):
+                                      width="stretch"):
                         if nou_liv == "— nelegat —":
                             new_lid = None
                         else:
