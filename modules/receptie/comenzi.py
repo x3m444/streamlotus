@@ -114,68 +114,73 @@ def show(data_selectata=None):
     # --- ZONA A: MENIURI RAPIDE ---
     st.markdown(f"#### 🍱 Meniuri și Porții Rapide - {data_selectata.strftime('%d/%m/%Y')}")
 
-    # Rând 1: Meniuri complete
-    st.caption("🍱 Meniu complet")
-    col_v1, col_v2 = st.columns(2)
+    if not lista_f1_plan or not lista_f2_plan:
+        st.info("⏳ Nu există meniu planificat pentru această dată. Folosește secțiunea de mai jos pentru produse speciale.")
+        st.divider()
+        # salt direct la zona B
+    else:
+        # Rând 1: Meniuri complete
+        st.caption("🍱 Meniu complet")
+        col_v1, col_v2 = st.columns(2)
 
-    with col_v1:
-        with st.container(border=True):
-            st.markdown(f"**V1** — {nume_f1} + {nume_f2_v1}" + (f" + {nume_salata}" if lista_salate_plan else ""))
-            m_v1 = st.number_input("Porții:", min_value=0, step=1, key="rapid_v1", label_visibility="collapsed")
-            if st.button("➕ Adaugă Meniu V1", key="btn_m_v1_rapide", use_container_width=True, type="primary"):
-                if m_v1 > 0:
-                    adauga_in_buffer(nume_f1, m_v1, pret_f1, "Meniu V1")
-                    adauga_in_buffer(nume_f2_v1, m_v1, pret_f2_v1, "Meniu V1")
-                    if lista_salate_plan:
-                        adauga_in_buffer(nume_salata, m_v1, pret_salata, "Meniu V1")
-                    st.rerun()
+        with col_v1:
+            with st.container(border=True):
+                st.markdown(f"**V1** — {nume_f1} + {nume_f2_v1}" + (f" + {nume_salata}" if lista_salate_plan else ""))
+                m_v1 = st.number_input("Porții:", min_value=0, step=1, key="rapid_v1", label_visibility="collapsed")
+                if st.button("➕ Adaugă Meniu V1", key="btn_m_v1_rapide", use_container_width=True, type="primary"):
+                    if m_v1 > 0:
+                        adauga_in_buffer(nume_f1, m_v1, pret_f1, "Meniu V1")
+                        adauga_in_buffer(nume_f2_v1, m_v1, pret_f2_v1, "Meniu V1")
+                        if lista_salate_plan:
+                            adauga_in_buffer(nume_salata, m_v1, pret_salata, "Meniu V1")
+                        st.rerun()
 
-    with col_v2:
-        with st.container(border=True):
-            st.markdown(f"**V2** — {nume_f1} + {nume_f2_v2}" + (f" + {nume_salata}" if lista_salate_plan else ""))
-            m_v2 = st.number_input("Porții:", min_value=0, step=1, key="rapid_v2", label_visibility="collapsed")
-            if st.button("➕ Adaugă Meniu V2", key="btn_m_v2_rapide", use_container_width=True, type="primary"):
-                if m_v2 > 0:
-                    adauga_in_buffer(nume_f1, m_v2, pret_f1, "Meniu V2")
-                    adauga_in_buffer(nume_f2_v2, m_v2, pret_f2_v2, "Meniu V2")
-                    if lista_salate_plan:
-                        adauga_in_buffer(nume_salata, m_v2, pret_salata, "Meniu V2")
-                    st.rerun()
+        with col_v2:
+            with st.container(border=True):
+                st.markdown(f"**V2** — {nume_f1} + {nume_f2_v2}" + (f" + {nume_salata}" if lista_salate_plan else ""))
+                m_v2 = st.number_input("Porții:", min_value=0, step=1, key="rapid_v2", label_visibility="collapsed")
+                if st.button("➕ Adaugă Meniu V2", key="btn_m_v2_rapide", use_container_width=True, type="primary"):
+                    if m_v2 > 0:
+                        adauga_in_buffer(nume_f1, m_v2, pret_f1, "Meniu V2")
+                        adauga_in_buffer(nume_f2_v2, m_v2, pret_f2_v2, "Meniu V2")
+                        if lista_salate_plan:
+                            adauga_in_buffer(nume_salata, m_v2, pret_salata, "Meniu V2")
+                        st.rerun()
 
-    # Rând 2: Porții solo
-    st.caption("🍽️ Porție solo")
-    col_s1, col_s2, col_s3 = st.columns(3)
+        # Rând 2: Porții solo
+        st.caption("🍽️ Porție solo")
+        col_s1, col_s2, col_s3 = st.columns(3)
 
-    with col_s1:
-        with st.container(border=True):
-            st.markdown(f"**Solo** — {nume_f1}")
-            f1_s = st.number_input("Porții:", min_value=0, step=1, key="rapid_f1", label_visibility="collapsed")
-            if st.button("➕ Adaugă", key="btn_s_f1_rapide", use_container_width=True):
-                if f1_s > 0:
-                    adauga_in_buffer(nume_f1, f1_s, pret_f1, "Solo")
-                    st.rerun()
+        with col_s1:
+            with st.container(border=True):
+                st.markdown(f"**Solo** — {nume_f1}")
+                f1_s = st.number_input("Porții:", min_value=0, step=1, key="rapid_f1", label_visibility="collapsed")
+                if st.button("➕ Adaugă", key="btn_s_f1_rapide", use_container_width=True):
+                    if f1_s > 0:
+                        adauga_in_buffer(nume_f1, f1_s, pret_f1, "Solo")
+                        st.rerun()
 
-    with col_s2:
-        with st.container(border=True):
-            st.markdown(f"**Solo** — {nume_f2_v1}" + (f" + {nume_salata}" if lista_salate_plan else ""))
-            f2_v1 = st.number_input("Porții:", min_value=0, step=1, key="rapid_f2v1", label_visibility="collapsed")
-            if st.button("➕ Adaugă", key="btn_s_f2v1_rapide", use_container_width=True):
-                if f2_v1 > 0:
-                    adauga_in_buffer(nume_f2_v1, f2_v1, pret_f2_v1, "Solo")
-                    if lista_salate_plan:
-                        adauga_in_buffer(nume_salata, f2_v1, pret_salata, "Solo")
-                    st.rerun()
+        with col_s2:
+            with st.container(border=True):
+                st.markdown(f"**Solo** — {nume_f2_v1}" + (f" + {nume_salata}" if lista_salate_plan else ""))
+                f2_v1 = st.number_input("Porții:", min_value=0, step=1, key="rapid_f2v1", label_visibility="collapsed")
+                if st.button("➕ Adaugă", key="btn_s_f2v1_rapide", use_container_width=True):
+                    if f2_v1 > 0:
+                        adauga_in_buffer(nume_f2_v1, f2_v1, pret_f2_v1, "Solo")
+                        if lista_salate_plan:
+                            adauga_in_buffer(nume_salata, f2_v1, pret_salata, "Solo")
+                        st.rerun()
 
-    with col_s3:
-        with st.container(border=True):
-            st.markdown(f"**Solo** — {nume_f2_v2}" + (f" + {nume_salata}" if lista_salate_plan else ""))
-            f2_v2 = st.number_input("Porții:", min_value=0, step=1, key="rapid_f2v2", label_visibility="collapsed")
-            if st.button("➕ Adaugă", key="btn_s_f2v2_rapide", use_container_width=True):
-                if f2_v2 > 0:
-                    adauga_in_buffer(nume_f2_v2, f2_v2, pret_f2_v2, "Solo")
-                    if lista_salate_plan:
-                        adauga_in_buffer(nume_salata, f2_v2, pret_salata, "Solo")
-                    st.rerun()
+        with col_s3:
+            with st.container(border=True):
+                st.markdown(f"**Solo** — {nume_f2_v2}" + (f" + {nume_salata}" if lista_salate_plan else ""))
+                f2_v2 = st.number_input("Porții:", min_value=0, step=1, key="rapid_f2v2", label_visibility="collapsed")
+                if st.button("➕ Adaugă", key="btn_s_f2v2_rapide", use_container_width=True):
+                    if f2_v2 > 0:
+                        adauga_in_buffer(nume_f2_v2, f2_v2, pret_f2_v2, "Solo")
+                        if lista_salate_plan:
+                            adauga_in_buffer(nume_salata, f2_v2, pret_salata, "Solo")
+                        st.rerun()
 
     st.divider()
     # --- ZONA B: PRODUSE SPECIALE & MENIU COMPUS ---
