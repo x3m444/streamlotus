@@ -94,7 +94,6 @@ def show(data_plan):
                             "id": prod_ales["id"], "nume": prod_ales["nume"],
                             "cantitate": qty_aleasa, "pret": prod_ales.get("pret_standard", 0)
                         })
-                    st.rerun()
 
                 if st.session_state.buffer_pranz:
                     st.markdown("---")
@@ -103,7 +102,6 @@ def show(data_plan):
                         c_txt.write(f"**{item['cantitate']}** x {item['nume']}")
                         if c_del.button("❌", key=f"del_p_f_{i}"):
                             st.session_state.buffer_pranz.pop(i)
-                            st.rerun()
                     if st.button("🚀 Confirmă și Salvează Lot Prânz", type="primary", use_container_width=True):
                         total_lot = sum(i["cantitate"] * i["pret"] for i in st.session_state.buffer_pranz)
                         db.save_comanda_finala(999, st.session_state.buffer_pranz, total_lot,
@@ -142,7 +140,6 @@ def show(data_plan):
                             "id": prod_ales_c["id"], "nume": prod_ales_c["nume"],
                             "cantitate": qty_aleasa_c, "pret": prod_ales_c.get("pret_standard", 0)
                         })
-                    st.rerun()
 
                 if st.session_state.buffer_cina:
                     st.markdown("---")
@@ -151,7 +148,6 @@ def show(data_plan):
                         c_txt.write(f"**{item['cantitate']}** x {item['nume']} ({item['pret']} lei/buc)")
                         if c_del.button("❌", key=f"del_cina_item_v3_{i}"):
                             st.session_state.buffer_cina.pop(i)
-                            st.rerun()
                     col_confirm, col_clear = st.columns(2)
                     with col_confirm:
                         if st.button("🚀 Confirmă Producție Cină", type="primary", use_container_width=True):
@@ -164,7 +160,6 @@ def show(data_plan):
                     with col_clear:
                         if st.button("🗑️ Golește lista", key="clear_cina_all_v3", use_container_width=True):
                             st.session_state.buffer_cina = []
-                            st.rerun()
 
     # ── SPECIAL / EVENIMENT ───────────────────────────────────
     loturi_spec_ev = loturi_lansate.get("special", []) + loturi_lansate.get("eveniment", [])
@@ -197,7 +192,6 @@ def show(data_plan):
                         "id": p_sel["id"], "nume": p_sel["nume"],
                         "cantitate": q_sel, "pret": p_sel.get("pret_standard") or 0
                     })
-                    st.rerun()
 
         if st.session_state.buffer_special:
             st.markdown("---")
@@ -206,7 +200,6 @@ def show(data_plan):
                 col_t.write(f"✅ {item['nume']} x {item['cantitate']} ({item['pret']} lei/buc)")
                 if col_r.button("🗑️", key=f"del_spec_{i}"):
                     st.session_state.buffer_special.pop(i)
-                    st.rerun()
             if st.button(f"🚀 Lansează {tip_spec.upper()}", use_container_width=True, type="primary"):
                 if not desc_spec:
                     st.error("⚠️ Lipsește descrierea!")

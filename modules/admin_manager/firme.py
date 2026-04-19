@@ -100,7 +100,6 @@ def show():
                     )
                     if c_ed.button("✏️ Edit", key=f"edit_btn_{fid}", use_container_width=True):
                         st.session_state["edit_lansare"].add(fid)
-                        st.rerun()
                     if c_del.button("🗑️", key=f"del_btn_{fid}", use_container_width=True,
                                     help="Șterge lansarea"):
                         db.delete_comanda(info["comanda_id"])
