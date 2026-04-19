@@ -9,6 +9,7 @@ import streamlit as st
 import database as db
 
 
+@st.fragment
 def show(data_selectata):
     st.subheader("🍽️ Declară Stoc Nevândut")
     st.caption("Declară ce a rămas neservit. Ghișeul va putea oferi aceste porții angajaților firmelor.")

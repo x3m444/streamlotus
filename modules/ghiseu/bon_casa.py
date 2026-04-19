@@ -10,6 +10,7 @@ import streamlit as st
 import database as db
 
 
+@st.fragment
 def show(data_azi):
     st.subheader("🧾 Servire cu Bon de Casă")
     st.caption("Clientul a plătit la casă. Selectează ce a cumpărat și confirmă servirea.")

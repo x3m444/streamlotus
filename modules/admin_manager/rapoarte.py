@@ -90,6 +90,7 @@ def _show_produse_breakdown(produse_dict):
 
 # ------------------------------------------------------------------
 
+@st.fragment
 def show(data_plan):
     """Randeaza sectiunea de monitorizare pentru data_plan."""
     st.subheader("📊 Control General Producție & Livrări")

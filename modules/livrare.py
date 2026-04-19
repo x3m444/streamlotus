@@ -24,6 +24,7 @@ import utils
 engine = db.get_engine()
 
 
+@st.fragment
 def show_livrare(sofer):
     """
     Randeaza ecranul livratorului pentru soferul dat.

@@ -10,6 +10,7 @@ import database as db
 import utils
 
 
+@st.fragment
 def show(data_selectata=None):
     st.title("📞 Recepție Comenzi")
 

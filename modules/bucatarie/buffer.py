@@ -19,6 +19,7 @@ TIP_ETICHETE = {
 }
 
 
+@st.fragment
 def show(data_selectata):
     st.subheader("📦 Buffer Ambalare — Porții Pre-ambalate")
     st.caption(

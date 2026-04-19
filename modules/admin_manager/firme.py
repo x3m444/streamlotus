@@ -42,6 +42,7 @@ TIP_FIRMA_DESC = {
 }
 
 
+@st.fragment
 def show():
     st.subheader("🏢 Gestiune Firme cu Contract")
 

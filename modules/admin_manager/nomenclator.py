@@ -18,6 +18,7 @@ from datetime import date
 import io
 
 
+@st.fragment
 def show():
     """Randeaza sectiunea de gestiune a nomenclatorului de produse."""
     st.subheader("⚙️ Gestiune Produse")

@@ -17,6 +17,7 @@ import utils
 from datetime import date
 
 
+@st.fragment
 def show(data_plan):
     """Randeaza sectiunea de planificare pentru saptamana care contine data_plan."""
     st.subheader("🚀 Configurare Fluxuri Producție")

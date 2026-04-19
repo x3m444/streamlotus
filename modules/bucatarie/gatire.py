@@ -11,6 +11,7 @@ import streamlit as st
 import database as db
 
 
+@st.fragment
 def show(data_selectata, engine):
     st.subheader("🔥 Ce gătim azi")
 

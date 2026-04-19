@@ -35,6 +35,7 @@ def _card_lot(lot, key_prefix, label="Lot"):
         return edit
 
 
+@st.fragment
 def show(data_plan):
     data_afisata   = data_plan.strftime('%d/%m/%Y')
     toate          = db.get_toate_produsele()

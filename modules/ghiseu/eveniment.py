@@ -9,6 +9,7 @@ import streamlit as st
 import database as db
 
 
+@st.fragment
 def show(data_azi):
     st.subheader("🎉 Servire Eveniment")
 
