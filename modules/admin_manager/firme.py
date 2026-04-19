@@ -417,13 +417,13 @@ def show():
                                 st.rerun()
 
                         if inactivi_ang:
-                            with st.expander(f"💤 Inactivi ({len(inactivi_ang)})"):
-                                for ang in inactivi_ang:
-                                    ca, cb = st.columns([5, 1])
-                                    ca.write(f"💤 {ang['nume_angajat']}")
-                                    if cb.button("Reactivează", key=f"react_{ang['id']}", use_container_width=True):
-                                        db.toggle_angajat(ang["id"], True)
-                                        st.rerun()
+                            st.caption(f"💤 Inactivi ({len(inactivi_ang)}):")
+                            for ang in inactivi_ang:
+                                ca, cb = st.columns([5, 1])
+                                ca.write(f"💤 {ang['nume_angajat']}")
+                                if cb.button("Reactivează", key=f"react_{ang['id']}", use_container_width=True):
+                                    db.toggle_angajat(ang["id"], True)
+                                    st.rerun()
 
             st.divider()
 

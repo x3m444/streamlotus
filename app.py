@@ -1,4 +1,7 @@
 import streamlit as st
+
+st.set_page_config(page_title="Cantina Lotus", layout="wide", page_icon="🍱")
+
 import database as db
 import auth
 
@@ -9,8 +12,6 @@ from modules.bucatarie import main as bucatarie_main
 from modules.ghiseu import main as ghiseu_main
 from modules.receptie import main as receptie_main
 from modules import manual
-
-st.set_page_config(page_title="Cantina Lotus", layout="wide", page_icon="🍱")
 
 st.markdown("""
 <style>
