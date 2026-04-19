@@ -134,7 +134,6 @@ def show(data_selectata=None):
                         adauga_in_buffer(nume_f2_v1, m_v1, pret_f2_v1, "Meniu V1")
                         if lista_salate_plan:
                             adauga_in_buffer(nume_salata, m_v1, pret_salata, "Meniu V1")
-                        st.rerun()
 
         with col_v2:
             with st.container(border=True):
@@ -146,7 +145,6 @@ def show(data_selectata=None):
                         adauga_in_buffer(nume_f2_v2, m_v2, pret_f2_v2, "Meniu V2")
                         if lista_salate_plan:
                             adauga_in_buffer(nume_salata, m_v2, pret_salata, "Meniu V2")
-                        st.rerun()
 
         # Rând 2: Porții solo
         st.caption("🍽️ Porție solo")
@@ -159,7 +157,6 @@ def show(data_selectata=None):
                 if st.button("➕ Adaugă", key="btn_s_f1_rapide", use_container_width=True):
                     if f1_s > 0:
                         adauga_in_buffer(nume_f1, f1_s, pret_f1, "Solo")
-                        st.rerun()
 
         with col_s2:
             with st.container(border=True):
@@ -170,7 +167,6 @@ def show(data_selectata=None):
                         adauga_in_buffer(nume_f2_v1, f2_v1, pret_f2_v1, "Solo")
                         if lista_salate_plan:
                             adauga_in_buffer(nume_salata, f2_v1, pret_salata, "Solo")
-                        st.rerun()
 
         with col_s3:
             with st.container(border=True):
@@ -181,7 +177,6 @@ def show(data_selectata=None):
                         adauga_in_buffer(nume_f2_v2, f2_v2, pret_f2_v2, "Solo")
                         if lista_salate_plan:
                             adauga_in_buffer(nume_salata, f2_v2, pret_salata, "Solo")
-                        st.rerun()
 
     st.divider()
     # --- ZONA B: PRODUSE SPECIALE & MENIU COMPUS ---
@@ -204,7 +199,6 @@ def show(data_selectata=None):
             if st.button("➕ Adaugă Special", key="btn_spec_liber"):
                 if sel_s:
                     adauga_in_buffer(sel_s['nume'], qty_s, sel_s.get('pret_standard', 0), "Special")
-                    st.rerun()
 
     with tab_custom:
         st.markdown("##### 🧩 Adaugă produse individuale")
@@ -247,7 +241,6 @@ def show(data_selectata=None):
                 if s_sel:
                     adauga_in_buffer(s_sel['nume'], qty_custom, s_sel.get('pret_standard', 0), "Custom")
                 st.success("✅ Adăugat!")
-                st.rerun()
 
     # --- ZONA C: REZUMAT COMANDĂ ---
     st.divider()
@@ -265,7 +258,6 @@ def show(data_selectata=None):
             col_p.write(f"{subtotal_item} lei")
             if col_x.button("❌", key=f"del_prod_{i}"):
                 st.session_state.buffer_comanda.pop(i)
-                st.rerun()
 
         st.markdown(f"### 💰 Total de plată: {total_p} lei")
     else:
