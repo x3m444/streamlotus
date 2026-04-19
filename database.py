@@ -243,6 +243,7 @@ def save_comanda_finala(client_id, produse, total, sofer, ora, obs, plata, tip_c
 # COMENZI — CITIRE
 # =============================================================
 
+@st.cache_data(ttl=15)
 def get_rezumat_zi(data_filtrare=None, tip_comanda=None, status_filtru=None):
     """
     Toate comenzile pentru o zi (admin + clienti).
@@ -292,6 +293,7 @@ def get_rezumat_zi(data_filtrare=None, tip_comanda=None, status_filtru=None):
         return [dict(r._mapping) for r in conn.execute(text(query), params)]
 
 
+@st.cache_data(ttl=15)
 def get_loturi_productie(data):
     """
     Loturile lansate de admin (client_id=999) pentru o zi.
@@ -327,6 +329,7 @@ def get_loturi_productie(data):
         return [dict(r._mapping) for r in result]
 
 
+@st.cache_data(ttl=15)
 def get_produse_speciale_zi(data):
     """
     Produsele cu tip_linie='special' din comenzile clientilor, agregate pe produs.
@@ -352,6 +355,7 @@ def get_produse_speciale_zi(data):
         return [dict(r._mapping) for r in result]
 
 
+@st.cache_data(ttl=15)
 def get_comenzi_receptie(data, status_filtru=None, sofer_filtru=None):
     """
     Comenzile reale ale clientilor (client_id != 999).
@@ -403,6 +407,7 @@ def get_comenzi_receptie(data, status_filtru=None, sofer_filtru=None):
         return [dict(r._mapping) for r in conn.execute(text(query), params)]
 
 
+@st.cache_data(ttl=300)
 def get_raport_interval(data_start, data_end):
     """Totaluri pe tip_comanda pentru un interval de date. Folosit de Admin → Rapoarte."""
     engine = get_engine()
@@ -451,6 +456,7 @@ def update_status_batch(engine, data, nume_produs, noul_status):
 # STOC PRODUCTIE
 # =============================================================
 
+@st.cache_data(ttl=15)
 def get_stoc_zi(data):
     """
     Calculeaza stocul disponibil per produs pentru o zi.
@@ -618,6 +624,7 @@ def get_firme_livrare(doar_active=True):
         return [dict(r._mapping) for r in conn.execute(text(query))]
 
 
+@st.cache_data(ttl=15)
 def get_comenzi_lansate_firme(data):
     """
     Returneaza dict { firma_id: {'comanda_id', 'sofer', 'ora', 'status', 'detalii', 'total'} }
@@ -653,6 +660,7 @@ def get_comenzi_lansate_firme(data):
         return result
 
 
+@st.cache_data(ttl=15)
 def get_loturi_lansate(data):
     """
     Returneaza loturile de productie lansate pentru data data (client_id=999, status != 'anulat').
@@ -734,6 +742,7 @@ def update_client_firma(firma_id, telefon, adresa):
 
 
 @st.cache_data(ttl=300)
+@st.cache_data(ttl=300)
 def get_angajati_firma(firma_id, doar_activi=True):
     engine = get_engine()
     with engine.connect() as conn:
@@ -762,6 +771,7 @@ def toggle_angajat(angajat_id, activ):
         """), {"a": activ, "id": angajat_id})
 
 
+@st.cache_data(ttl=300)
 def get_toti_angajatii_firme():
     """Batch: toti angajatii din toate firmele. { firma_id: [angajati] }"""
     engine = get_engine()
@@ -779,6 +789,7 @@ def get_toti_angajatii_firme():
         return result
 
 
+@st.cache_data(ttl=15)
 def get_toti_serviti_azi(data):
     """Batch: toti angajatii serviti azi din toate firmele. { firma_id: {angajat_id: text} }"""
     engine = get_engine()
@@ -799,6 +810,7 @@ def get_toti_serviti_azi(data):
         return result
 
 
+@st.cache_data(ttl=15)
 def get_toate_pachetele_azi(data):
     """Batch: toate pachetele azi din toate firmele. { firma_id: {angajat_id: {servire_id, status, produse}} }"""
     engine = get_engine()
@@ -819,6 +831,7 @@ def get_toate_pachetele_azi(data):
         return result
 
 
+@st.cache_data(ttl=15)
 def get_angajati_serviti_azi(firma_id, data):
     """
     Returneaza dict { angajat_id: [produse servite] } pentru firma si data data.
@@ -839,6 +852,7 @@ def get_angajati_serviti_azi(firma_id, data):
         return {row[0]: row[1] for row in r}
 
 
+@st.cache_data(ttl=15)
 def get_pachete_firma_azi(data):
     """
     Returneaza pachetele de ambalat/ambalate grupate pe firma.
@@ -876,6 +890,7 @@ def update_status_pachet(servire_id, noul_status):
         """), {"s": noul_status, "id": servire_id})
 
 
+@st.cache_data(ttl=15)
 def get_pachete_angajat_azi(firma_id, data):
     """
     Returneaza statusul pachetelor per angajat pentru o firma si zi.
@@ -927,6 +942,7 @@ def save_servire(data, tip_servire, produse, firma_id=None, angajat_id=None, com
                 """), {"q": p['cantitate'], "data": data, "n": p['nume_produs']})
 
 
+@st.cache_data(ttl=15)
 def get_loturi_eveniment(data):
     """Loturile de tip special/eveniment lansate de admin pentru o zi."""
     engine = get_engine()
@@ -945,6 +961,7 @@ def get_loturi_eveniment(data):
         return [dict(r._mapping) for r in r]
 
 
+@st.cache_data(ttl=15)
 def get_serviri_eveniment_azi(comanda_ref_id, data):
     """Totalul servit dintr-un lot de eveniment."""
     engine = get_engine()
@@ -1042,6 +1059,7 @@ def save_rezervare_firma(firma_id, data, cantitate):
             """), {"fid": firma_id, "data": data, "qty": cantitate})
 
 
+@st.cache_data(ttl=15)
 def get_rezervari_firme_azi(data):
     """
     Returneaza dict { firma_id: cantitate } cu rezervarile confirmate pentru ziua data.
@@ -1057,6 +1075,7 @@ def get_rezervari_firme_azi(data):
         return {row[0]: {"nume": row[1], "cantitate": row[2]} for row in r}
 
 
+@st.cache_data(ttl=15)
 def get_raport_serviri_firme(data):
     """
     Raport complet serviri firme pentru o zi.
@@ -1093,6 +1112,7 @@ def get_raport_serviri_firme(data):
         return [dict(row._mapping) for row in r]
 
 
+@st.cache_data(ttl=15)
 def get_rezumat_serviri_firme_ghiseu(data):
     """
     Rezumat per firma pentru monitorizare:
@@ -1124,6 +1144,7 @@ def get_rezumat_serviri_firme_ghiseu(data):
         return [dict(row._mapping) for row in r]
 
 
+@st.cache_data(ttl=15)
 def get_total_rezervat_firme(data):
     """Returneaza totalul portiilor rezervate pentru firme pe ziua data."""
     engine = get_engine()
@@ -1160,6 +1181,7 @@ def _plan_to_componente(plan_zi):
     }
 
 
+@st.cache_data(ttl=15)
 def get_buffer_ambalare(data):
     """
     Returneaza buffer-ul per tip_meniu pentru ziua data.
