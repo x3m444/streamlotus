@@ -15,17 +15,26 @@ Organizat pe sectiuni:
 from sqlalchemy import create_engine, text
 import streamlit as st
 import utils
+import os
 
 
 # =============================================================
 # CONEXIUNE
 # =============================================================
 
+def _secret(key):
+    """Citeste din st.secrets (local/Streamlit Cloud) sau os.environ (HuggingFace)."""
+    try:
+        return st.secrets[key]
+    except Exception:
+        return os.environ.get(key)
+
+
 @st.cache_resource
 def get_engine():
     conn_url = (
-        f"postgresql://{st.secrets['DB_USER']}:{st.secrets['DB_PASS']}"
-        f"@{st.secrets['DB_HOST']}:{st.secrets['DB_PORT']}/{st.secrets['DB_NAME']}"
+        f"postgresql://{_secret('DB_USER')}:{_secret('DB_PASS')}"
+        f"@{_secret('DB_HOST')}:{_secret('DB_PORT')}/{_secret('DB_NAME')}"
     )
     return create_engine(conn_url, pool_size=5, max_overflow=10)
 
