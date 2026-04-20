@@ -236,6 +236,10 @@ def save_comanda_finala(client_id, produse, total, sofer, ora, obs, plata, tip_c
                 "pret": p['pret'], "tip_linie": p.get('tip_linie', 'standard'),
                 "status": status_linie
             })
+    get_loturi_lansate.clear()
+    get_stoc_zi.clear()
+    get_rezumat_zi.clear()
+    get_comenzi_receptie.clear()
     return True
 
 
@@ -1306,6 +1310,10 @@ def delete_comanda(id_comanda):
         with engine.begin() as conn:
             conn.execute(text("DELETE FROM comenzi_linii WHERE comanda_id = :id"), {"id": id_comanda})
             conn.execute(text("DELETE FROM comenzi WHERE id = :id"), {"id": id_comanda})
+        get_loturi_lansate.clear()
+        get_stoc_zi.clear()
+        get_rezumat_zi.clear()
+        get_comenzi_receptie.clear()
         return True
     except Exception as e:
         print(f"Eroare la stergere comanda {id_comanda}: {e}")
