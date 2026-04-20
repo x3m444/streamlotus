@@ -14,8 +14,9 @@ import streamlit as st
 import database as db
 
 
-def _card_lot(lot, key_prefix, label="Lot"):
-    """Card consistent cu cel din Lansare Firme. Returneaza True dacă s-a cerut editare."""
+def _card_lot(lot, key_prefix, buffer_key, label="Lot"):
+    """Afiseaza un lot lansat cu optiuni Edit si Sterge.
+    Edit: incarca produsele lotului in buffer si sterge lotul (recrare)."""
     comanda_id = lot["comanda_id"]
     with st.container(border=True):
         c_n, c_info, c_ed, c_del = st.columns([2.5, 5, 1.2, 1.2])
@@ -26,13 +27,18 @@ def _card_lot(lot, key_prefix, label="Lot"):
             f"🕐 {lot['ora']}  |  💰 {lot['total']:.0f} lei  |  "
             f"{lot['status'].upper()}{detalii_str}"
         )
-        edit   = c_ed.button("✏️ Edit", key=f"edit_{key_prefix}_{comanda_id}",
-                              width="stretch")
-        if c_del.button("🗑️ Șterge", key=f"del_{key_prefix}_{comanda_id}",
-                        width="stretch"):
+        if c_ed.button("✏️ Edit", key=f"edit_{key_prefix}_{comanda_id}", width="stretch"):
+            produse_lot = db.get_produse_comanda(comanda_id)
+            st.session_state[buffer_key] = [
+                {"id": p["produs_id"], "nume": p["nume"],
+                 "cantitate": p["cantitate"], "pret": p.get("pret", 0)}
+                for p in produse_lot
+            ]
             db.delete_comanda(comanda_id)
             st.rerun(scope="fragment")
-        return edit
+        if c_del.button("🗑️ Șterge", key=f"del_{key_prefix}_{comanda_id}", width="stretch"):
+            db.delete_comanda(comanda_id)
+            st.rerun(scope="fragment")
 
 
 @st.fragment
@@ -40,6 +46,13 @@ def show(data_plan):
     data_afisata   = data_plan.strftime('%d/%m/%Y')
     toate          = db.get_toate_produsele()
     loturi_lansate = db.get_loturi_lansate(data_plan)
+
+    # Resetare buffere la schimbare de data
+    if st.session_state.get("_lansare_data") != data_plan:
+        st.session_state["_lansare_data"] = data_plan
+        st.session_state.pop("buffer_pranz",   None)
+        st.session_state.pop("buffer_cina",    None)
+        st.session_state.pop("buffer_special", None)
 
     st.subheader("🏭 Lansare Loturi în Producție")
     st.warning(f"📅 Loturile de mai jos vor fi lansate pentru data: **{data_afisata}**")
@@ -70,9 +83,7 @@ def show(data_plan):
     with st.expander(f"🍲 LANSARE PRODUCȚIE PRÂNZ{status_pranz}", expanded=False):
         if loturi_pranz:
             for lot in loturi_pranz:
-                if _card_lot(lot, "pranz", label="Lot Prânz"):
-                    db.delete_comanda(lot["comanda_id"])
-                    st.rerun(scope="fragment")
+                _card_lot(lot, "pranz", buffer_key="buffer_pranz", label="Lot Prânz")
         else:
             m_p = db.get_meniu_planificat(data_plan, tip_plan="pranz")
             if not m_p:
@@ -116,9 +127,7 @@ def show(data_plan):
     with st.expander(f"🌙 LANSARE PRODUCȚIE CINĂ{status_cina}", expanded=False):
         if loturi_cina:
             for lot in loturi_cina:
-                if _card_lot(lot, "cina", label="Lot Cină"):
-                    db.delete_comanda(lot["comanda_id"])
-                    st.rerun(scope="fragment")
+                _card_lot(lot, "cina", buffer_key="buffer_cina", label="Lot Cină")
         else:
             m_c = db.get_meniu_planificat(data_plan, tip_plan="cina")
             if not m_c:

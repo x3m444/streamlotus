@@ -1287,6 +1287,18 @@ def distribuie_din_buffer(data, tip_meniu, firma_id=None, angajat_id=None):
 # STERGERI
 # =============================================================
 
+def get_produse_comanda(id_comanda):
+    """Returneaza liniile de produse ale unei comenzi."""
+    engine = get_engine()
+    with engine.connect() as conn:
+        result = conn.execute(text("""
+            SELECT produs_id, nume_produs, cantitate, pret_unitar
+            FROM comenzi_linii WHERE comanda_id = :id
+        """), {"id": id_comanda})
+        return [{"produs_id": r[0], "nume": r[1], "cantitate": r[2], "pret": float(r[3] or 0)}
+                for r in result]
+
+
 def delete_comanda(id_comanda):
     """Sterge o comanda si toate liniile ei (cascade manual)."""
     engine = get_engine()
