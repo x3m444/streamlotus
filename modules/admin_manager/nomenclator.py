@@ -168,10 +168,10 @@ def show():
     st.divider()
 
     # -------------------------------------------------------
-    # TABEL EDITABIL (edit + stergere)
+    # TABEL EDITABIL grupat pe categorii
     # -------------------------------------------------------
     st.subheader("📋 Gestiune Tabelară")
-    st.info("💡 Poți edita direct în tabel sau bifa 'Elimină?' pentru a șterge înregistrări.")
+    st.info("💡 Deschide categoria dorită, editează direct în tabel sau bifează 'Elimină?' pentru ștergere.")
 
     toate_produsele = db.get_toate_produsele()
 
@@ -179,48 +179,62 @@ def show():
         st.info("Nomenclatorul este gol. Adaugă primul produs mai sus.")
         return
 
-    df_nom = pd.DataFrame(toate_produsele)
-    df_nom["șterge"] = False
-    df_nom = df_nom[["id", "nume", "categorie", "pret_standard", "șterge"]]
+    col_config = {
+        "id":            st.column_config.NumberColumn("ID", disabled=True),
+        "nume":          st.column_config.TextColumn("Denumire Produs", required=True),
+        "categorie":     st.column_config.SelectboxColumn(
+                             "Categorie",
+                             options=["felul_1", "felul_2", "salate", "sandwich", "special", "desert"],
+                             required=True
+                         ),
+        "pret_standard": st.column_config.NumberColumn("Preț (RON)", min_value=0, format="%.2f"),
+        "șterge":        st.column_config.CheckboxColumn("Elimină?", help="Bifează pentru ștergere"),
+    }
 
-    edited_data = st.data_editor(
-        df_nom,
-        column_config={
-            "id":           st.column_config.NumberColumn("ID", disabled=True),
-            "nume":         st.column_config.TextColumn("Denumire Produs", required=True),
-            "categorie":    st.column_config.SelectboxColumn(
-                                "Categorie",
-                                options=["felul_1", "felul_2", "salate", "sandwich", "special", "desert"],
-                                required=True
-                            ),
-            "pret_standard": st.column_config.NumberColumn("Preț (RON)", min_value=0, format="%.2f"),
-            "șterge":       st.column_config.CheckboxColumn("Elimină?", help="Bifează pentru ștergere"),
-        },
-        hide_index=True,
-        width="stretch",
-        key="nomenclator_editor"
-    )
+    CATEGORII = [
+        ("felul_1",  "🥣 Felul 1"),
+        ("felul_2",  "🍖 Felul 2"),
+        ("salate",   "🥗 Salate"),
+        ("sandwich", "🥪 Sandwich"),
+        ("special",  "✨ Speciale"),
+        ("desert",   "🍮 Desert"),
+    ]
 
-    if st.button("💾 Salvează Modificările", width="stretch", type="primary"):
-        ids_de_sters = edited_data[edited_data["șterge"] == True]["id"].tolist()
+    for cod, eticheta in CATEGORII:
+        produse_cat = [p for p in toate_produsele if p['categorie'] == cod]
+        if not produse_cat:
+            continue
 
-        for index, row in edited_data.iterrows():
-            if row['id'] in ids_de_sters:
-                db.delete_produs(row['id'])
-            else:
-                # Salvam doar daca s-a modificat ceva fata de original
-                original = df_nom.iloc[index]
-                if not row.equals(original):
-                    db.update_produs(row['id'], row['nume'], row['categorie'], row['pret_standard'])
+        with st.expander(f"{eticheta} — {len(produse_cat)} produse", expanded=False):
+            df_cat = pd.DataFrame(produse_cat)[["id", "nume", "categorie", "pret_standard"]]
+            df_cat = df_cat.reset_index(drop=True)
+            df_cat["șterge"] = False
 
-        st.success("✅ Baza de date actualizată!")
-        st.rerun(scope="fragment")
+            edited_cat = st.data_editor(
+                df_cat,
+                column_config=col_config,
+                hide_index=True,
+                width="stretch",
+                key=f"editor_{cod}"
+            )
+
+            if st.button(f"💾 Salvează {eticheta}", key=f"save_{cod}", width="stretch", type="primary"):
+                ids_de_sters = edited_cat[edited_cat["șterge"] == True]["id"].tolist()
+                for i, row in edited_cat.iterrows():
+                    if row['id'] in ids_de_sters:
+                        db.delete_produs(row['id'])
+                    else:
+                        original = df_cat.iloc[i]
+                        if not row.equals(original):
+                            db.update_produs(row['id'], row['nume'], row['categorie'], row['pret_standard'])
+                st.success(f"✅ {eticheta} actualizat!")
+                st.rerun(scope="fragment")
 
     # -------------------------------------------------------
     # EXPORT EXCEL
     # -------------------------------------------------------
-    st.write("")
-    df_export = edited_data[edited_data["șterge"] == False][["nume", "categorie", "pret_standard"]]
+    st.divider()
+    df_export = pd.DataFrame(toate_produsele)[["nume", "categorie", "pret_standard"]]
     excel_data = utils.export_to_excel(df_export, sheet_name="Nomenclator")
 
     st.download_button(
