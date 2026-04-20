@@ -120,7 +120,7 @@ def _render_card_livrare(cmd, actiune):
                 width="stretch"
             ):
                 db.update_status_comanda(engine, cmd['id'], 'pedrum')
-                st.rerun()
+                st.rerun(scope="fragment")
 
         elif actiune == "livrat":
             if st.button(
@@ -129,4 +129,4 @@ def _render_card_livrare(cmd, actiune):
                 width="stretch"
             ):
                 db.update_status_comanda(engine, cmd['id'], 'livrat')
-                st.rerun()
+                st.rerun(scope="fragment")

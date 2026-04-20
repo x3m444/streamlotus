@@ -49,7 +49,7 @@ def show():
             if nume_n and cat_n and pret_n is not None:
                 db.add_produs(nume_n, cat_n, pret_n)
                 st.success(f"✅ Adăugat: {nume_n}")
-                st.rerun()
+                st.rerun(scope="fragment")
             else:
                 st.error("⚠️ Completează toate câmpurile!")
 
@@ -161,7 +161,7 @@ def show():
                                 for r in noi:
                                     db.add_produs(r["Denumire"], r["Categorie"], r["Pret"])
                                 st.success(f"✅ {len(noi)} produse importate cu succes!")
-                                st.rerun()
+                                st.rerun(scope="fragment")
                         else:
                             st.info("Toate produsele valide există deja în nomenclator.")
 
@@ -214,7 +214,7 @@ def show():
                     db.update_produs(row['id'], row['nume'], row['categorie'], row['pret_standard'])
 
         st.success("✅ Baza de date actualizată!")
-        st.rerun()
+        st.rerun(scope="fragment")
 
     # -------------------------------------------------------
     # EXPORT EXCEL

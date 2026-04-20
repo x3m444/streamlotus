@@ -262,7 +262,7 @@ def show(data_plan):
                     with col_dreapta:
                         if st.button("🗑️ Șterge", key=f"admin_del_lot_{cz['id']}", width="stretch"):
                             if db.delete_comanda(cz['id']):
-                                st.rerun()
+                                st.rerun(scope="fragment")
 
         if comenzi_cl:
             st.markdown("### 📝 Comenzi Clienți")
@@ -304,10 +304,10 @@ def show(data_plan):
                     with col_dreapta:
                         if st.button("Anulează", key=f"admin_cancel_{cz['id']}", width="stretch"):
                             db.update_status_comanda(engine, cz['id'], 'anulat')
-                            st.rerun()
+                            st.rerun(scope="fragment")
                         if st.button("🗑️ Șterge", key=f"admin_del_{cz['id']}", width="stretch"):
                             if db.delete_comanda(cz['id']):
-                                st.rerun()
+                                st.rerun(scope="fragment")
 
         # -------------------------------------------------------
         # 4. SERVIRI FIRME GHIȘEU

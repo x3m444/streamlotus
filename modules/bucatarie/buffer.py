@@ -71,7 +71,7 @@ def show(data_selectata):
                              disabled=(qty == 0)):
                     db.add_to_buffer(data_selectata, tip, qty)
                     st.success(f"+{qty} porții {TIP_ETICHETE.get(tip, tip)}")
-                    st.rerun()
+                    st.rerun(scope="fragment")
 
     st.divider()
 
@@ -91,4 +91,4 @@ def show(data_selectata):
         if st.button("💾 Setează", key="buf_corectie_btn", type="primary"):
             db.set_buffer(data_selectata, tip_sel, qty_set)
             st.success(f"Buffer setat: {TIP_ETICHETE.get(tip_sel, tip_sel)} = {qty_set}")
-            st.rerun()
+            st.rerun(scope="fragment")

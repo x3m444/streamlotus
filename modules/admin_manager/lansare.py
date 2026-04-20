@@ -31,7 +31,7 @@ def _card_lot(lot, key_prefix, label="Lot"):
         if c_del.button("🗑️ Șterge", key=f"del_{key_prefix}_{comanda_id}",
                         width="stretch"):
             db.delete_comanda(comanda_id)
-            st.rerun()
+            st.rerun(scope="fragment")
         return edit
 
 
@@ -72,7 +72,7 @@ def show(data_plan):
             for lot in loturi_pranz:
                 if _card_lot(lot, "pranz", label="Lot Prânz"):
                     db.delete_comanda(lot["comanda_id"])
-                    st.rerun()
+                    st.rerun(scope="fragment")
         else:
             m_p = db.get_meniu_planificat(data_plan, tip_plan="pranz")
             if not m_p:
@@ -108,7 +108,7 @@ def show(data_plan):
                                                "INTERN", "12:00", "Lot Producție Prânz",
                                                "cantina", "pranz", data_plan)
                         st.session_state.buffer_pranz = []
-                        st.rerun()
+                        st.rerun(scope="fragment")
 
     # ── CINĂ ─────────────────────────────────────────────────
     loturi_cina = loturi_lansate.get("cina", [])
@@ -118,7 +118,7 @@ def show(data_plan):
             for lot in loturi_cina:
                 if _card_lot(lot, "cina", label="Lot Cină"):
                     db.delete_comanda(lot["comanda_id"])
-                    st.rerun()
+                    st.rerun(scope="fragment")
         else:
             m_c = db.get_meniu_planificat(data_plan, tip_plan="cina")
             if not m_c:
@@ -156,7 +156,7 @@ def show(data_plan):
                                                    "INTERN", "19:00", "Lot Producție Cină",
                                                    "cantina", "cina", data_plan)
                             st.session_state.buffer_cina = []
-                            st.rerun()
+                            st.rerun(scope="fragment")
                     with col_clear:
                         if st.button("🗑️ Golește lista", key="clear_cina_all_v3", width="stretch"):
                             st.session_state.buffer_cina = []
@@ -208,4 +208,4 @@ def show(data_plan):
                     db.save_comanda_finala(999, st.session_state.buffer_special, total_spec,
                                            "INTERN", "08:00", desc_spec, "cantina", tip_spec, data_plan)
                     st.session_state.buffer_special = []
-                    st.rerun()
+                    st.rerun(scope="fragment")

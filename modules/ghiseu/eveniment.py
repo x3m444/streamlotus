@@ -72,6 +72,6 @@ def show(data_azi):
             if produse_de_salvat:
                 db.save_servire(data_azi, 'eveniment', produse_de_salvat, comanda_ref_id=lot_sel['id'])
                 st.success("Servire înregistrată!")
-                st.rerun()
+                st.rerun(scope="fragment")
             else:
                 st.warning("Introduceți cel puțin o cantitate.")

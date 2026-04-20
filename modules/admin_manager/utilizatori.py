@@ -88,7 +88,7 @@ def show():
                 try:
                     _add_user(nou_user.strip(), nou_pass.strip(), nou_rol, liv_id)
                     st.success(f"✅ Utilizator creat: **{nou_user}** ({ROL_LABEL[nou_rol]})")
-                    st.rerun()
+                    st.rerun(scope="fragment")
                 except Exception as e:
                     if "unique" in str(e).lower():
                         st.error("Username deja există.")
@@ -124,7 +124,7 @@ def show():
                     if new_pass.strip():
                         _reset_password(uid, new_pass.strip())
                         st.success("Parolă resetată.")
-                        st.rerun()
+                        st.rerun(scope="fragment")
                     else:
                         st.warning("Introdu parola nouă.")
 
@@ -135,12 +135,12 @@ def show():
                     if col_act.button("🔴 Dezactivează", key=f"dez_{uid}",
                                       width="stretch"):
                         _set_activ(uid, False)
-                        st.rerun()
+                        st.rerun(scope="fragment")
                 else:
                     if col_act.button("🟢 Activează", key=f"act_{uid}",
                                       width="stretch"):
                         _set_activ(uid, True)
-                        st.rerun()
+                        st.rerun(scope="fragment")
 
                 # Leagă livrator (doar pentru rol livrator)
                 if u["rol"] == "livrator":
@@ -161,6 +161,6 @@ def show():
                         with db.get_engine().begin() as conn:
                             conn.execute(text("UPDATE utilizatori SET livrator_id = :lid WHERE id = :id"),
                                          {"lid": new_lid, "id": uid})
-                        st.rerun()
+                        st.rerun(scope="fragment")
 
         st.divider()

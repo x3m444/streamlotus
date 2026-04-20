@@ -93,6 +93,6 @@ def show():
                     with c5:
                         if st.button("🗑️", key=f"del_{cz['id']}", help="Șterge comanda"):
                             if db.delete_comanda(cz['id']):
-                                st.rerun()
+                                st.rerun(scope="fragment")
 
                     st.divider()

@@ -35,7 +35,7 @@ def show(data_selectata, engine):
                 if col_btn.button("📦 Ambalat", key=f"amb_{pct['servire_id']}",
                                   width="stretch", type="primary"):
                     db.update_status_pachet(pct['servire_id'], 'ambalat')
-                    st.rerun()
+                    st.rerun(scope="fragment")
             else:
                 col_btn.success("✅ Ambalat")
         st.divider()
@@ -125,7 +125,7 @@ def show(data_selectata, engine):
                     ):
                         db.update_status_comanda(engine, cmd['id'], 'pregatit')
                         st.success(f"Comanda #{cmd['id']} marcată ca PREGĂTITĂ!")
-                        st.rerun()
+                        st.rerun(scope="fragment")
                 elif lipsa_stoc:
                     if st.button(
                         "❌ Anulează",
@@ -136,7 +136,7 @@ def show(data_selectata, engine):
                     ):
                         db.delete_comanda(cmd['id'])
                         st.warning(f"Comanda #{cmd['id']} anulată.")
-                        st.rerun()
+                        st.rerun(scope="fragment")
                 else:
                     st.button(
                         "⏳ Așteaptă",

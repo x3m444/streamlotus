@@ -72,7 +72,7 @@ def show(data_azi):
                 ):
                     adauga_grup(f"📦 {label_buf}", comp[tip],
                                 din_buffer=True, tip_meniu=tip)
-                    st.rerun()
+                    st.rerun(scope="fragment")
         st.divider()
 
     if not gatite:
@@ -86,7 +86,7 @@ def show(data_azi):
         if st.button(f"{icon} {nume}\n({stare})", key=key,
                      width="stretch", disabled=not disponibil):
             adauga_grup(f"{icon} {nume}", [produs])
-            st.rerun()
+            st.rerun(scope="fragment")
 
     f1    = lista_f1[0]    if lista_f1           else None
     f2v1  = lista_f2[0]    if len(lista_f2) >= 1 else None
@@ -108,7 +108,7 @@ def show(data_azi):
         if st.button(label_v1, key="bon_meniu_v1",
                      width="stretch", disabled=not disponibil_v1):
             adauga_grup(f"🍱 {label_v1}", componente_v1)
-            st.rerun()
+            st.rerun(scope="fragment")
 
     with col_v2:
         componente_v2 = [p for p in [f1, f2v2, salata] if p]
@@ -117,7 +117,7 @@ def show(data_azi):
         if st.button(label_v2, key="bon_meniu_v2",
                      width="stretch", disabled=not disponibil_v2):
             adauga_grup(f"🍱 {label_v2}", componente_v2)
-            st.rerun()
+            st.rerun(scope="fragment")
 
     # --- Portii solo
     st.markdown("**🍽️ Porție solo:**")
@@ -140,7 +140,7 @@ def show(data_azi):
                 if st.button(f"{icon} {label_solo}\n({stare})", key=key,
                              width="stretch", disabled=not disponibil):
                     adauga_grup(f"{icon} {label_solo}", componente)
-                    st.rerun()
+                    st.rerun(scope="fragment")
 
     # --- Bon curent — un buton per grup, apesi ca sa stergi
     if st.session_state.bon_buffer:
@@ -155,7 +155,7 @@ def show(data_azi):
                     grup['cantitate'] -= 1
                 else:
                     st.session_state.bon_buffer.pop(i)
-                st.rerun()
+                st.rerun(scope="fragment")
 
         col_conf, col_clear = st.columns(2)
         with col_conf:
@@ -176,8 +176,8 @@ def show(data_azi):
 
                 st.session_state.bon_buffer = []
                 st.success("Servit!")
-                st.rerun()
+                st.rerun(scope="fragment")
         with col_clear:
             if st.button("🗑️ Golește", width="stretch"):
                 st.session_state.bon_buffer = []
-                st.rerun()
+                st.rerun(scope="fragment")

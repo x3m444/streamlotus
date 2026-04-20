@@ -102,7 +102,7 @@ def show(data_azi):
             if col_btn.button("➕", key=f"add_ang_gh_{firma_id}", width="stretch"):
                 if nou.strip():
                     db.add_angajat(firma_id, nou.strip())
-                    st.rerun()
+                    st.rerun(scope="fragment")
 
             st.divider()
 
@@ -143,7 +143,7 @@ def show(data_azi):
                             if col_btn1.button("🚀 Ridicat", key=f"ridicat_{aid}",
                                                width="stretch", type="primary"):
                                 db.update_status_pachet(pachet_info["servire_id"], "ridicat")
-                                st.rerun()
+                                st.rerun(scope="fragment")
                     else:
                         # Neservit — alege meniu + la masa sau pachet
                         with col_meniu:
@@ -192,7 +192,7 @@ def show(data_azi):
                                                width="stretch", type="primary"):
                                 db.save_servire(data_azi, "firma", _produse(meniu_ales, nev_ales),
                                                 firma_id=firma_id, angajat_id=aid, tip_ridicare="la_masa")
-                                st.rerun()
+                                st.rerun(scope="fragment")
                             # Pachet: din buffer daca disponibil, altfel standard
                             tip_meniu_sel = optiuni_meniu.get(meniu_ales, {}).get("tip_meniu")
                             buf_dispon    = buffer_azi.get(tip_meniu_sel, {}).get("disponibil", 0) if tip_meniu_sel else 0
@@ -207,12 +207,12 @@ def show(data_azi):
                                 else:
                                     db.save_servire(data_azi, "firma", _produse(meniu_ales, nev_ales),
                                                     firma_id=firma_id, angajat_id=aid, tip_ridicare="pachet")
-                                st.rerun()
+                                st.rerun(scope="fragment")
 
                     if col_conc.button("🔴", key=f"conc_{aid}",
                                        width="stretch", help="Concediu"):
                         db.toggle_angajat(aid, False)
-                        st.rerun()
+                        st.rerun(scope="fragment")
 
             # Inactivi
             if inactivi:
@@ -222,4 +222,4 @@ def show(data_azi):
                         ca.write(f"💤 {ang['nume_angajat']}")
                         if cb.button("🟢", key=f"act_{ang['id']}", width="stretch", help="Reactivează"):
                             db.toggle_angajat(ang["id"], True)
-                            st.rerun()
+                            st.rerun(scope="fragment")

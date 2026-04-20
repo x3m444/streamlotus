@@ -59,17 +59,17 @@ def show(data_selectata=None):
             if col1.button("💾 Salvează Client Nou", type="primary"):
                 db.add_client(nume_client, telefon, adresa_principala)
                 st.success("Client adăugat!")
-                st.rerun()
+                st.rerun(scope="fragment")
         else:
             if col1.button("🆙 Actualizează Date"):
                 db.update_client(client_id, nume_client, telefon, adresa_principala)
                 st.success("Modificări salvate!")
-                st.rerun()
+                st.rerun(scope="fragment")
 
             if col2.button("🗑️ Șterge Client"):
                 if db.delete_client(client_id):
                     st.success("Client eliminat!")
-                    st.rerun()
+                    st.rerun(scope="fragment")
 
     # --- 2. SELECȚIE PRODUSE ---
     st.divider()
@@ -307,4 +307,4 @@ def show(data_selectata=None):
             if succes:
                 st.success(f"✅ Comandă salvată pentru {data_selectata.strftime('%d/%m/%Y')}! Livrator: {sofer}")
                 st.session_state.buffer_comanda = []
-                st.rerun()
+                st.rerun(scope="fragment")

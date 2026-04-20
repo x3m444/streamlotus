@@ -104,7 +104,7 @@ def show():
                                     help="Șterge lansarea"):
                         db.delete_comanda(info["comanda_id"])
                         st.session_state["edit_lansare"].discard(fid)
-                        st.rerun()
+                        st.rerun(scope="fragment")
 
             # ── Firme Ghișeu+Livrare ─────────────────────────────
             firme_gl = [f for f in firme_liv if f["tip_firma"] == "ghiseu_livrare"]
@@ -164,7 +164,7 @@ def show():
                                 db.save_comanda_firma_livrare(fid, firma["nume_firma"],
                                                              produse_fmt, livrator, ora,
                                                              data_lansare, tip_comanda="livrare")
-                                st.rerun()
+                                st.rerun(scope="fragment")
 
                 st.divider()
 
@@ -222,7 +222,7 @@ def show():
                                       "cantitate": qty, "pret": produs_ales.get("pret_standard", 0)}],
                                     livrator, ora, data_lansare, tip_comanda="livrare"
                                 )
-                                st.rerun()
+                                st.rerun(scope="fragment")
 
                 st.divider()
 
@@ -285,7 +285,7 @@ def show():
                                     fid, firma["nume_firma"], produse_fmt,
                                     livrator, ora, data_lansare, tip_comanda="special"
                                 )
-                                st.rerun()
+                                st.rerun(scope="fragment")
 
     # ══════════════════════════════════════════════════════════════
     # TAB 2 — GESTIUNE FIRME
@@ -316,7 +316,7 @@ def show():
                 if nou_nume.strip():
                     db.add_firma(nou_nume.strip(), nou_contract, nou_tip_f, nou_cant)
                     st.success(f"Firmă adăugată: {nou_nume.strip()}")
-                    st.rerun()
+                    st.rerun(scope="fragment")
                 else:
                     st.error("Introdu numele firmei.")
 
@@ -384,19 +384,19 @@ def show():
                         db.update_firma(fid, nou_n, nou_tc, firma["activ"], nou_tip_f, nou_cd)
                         db.update_client_firma(fid, nou_tel, nou_adr)
                         st.success("Salvat!")
-                        st.rerun()
+                        st.rerun(scope="fragment")
 
                     col_act, col_dez = st.columns(2)
                     if firma["activ"]:
                         if col_dez.button("🔴 Dezactivează", key=f"dez_f_{fid}", width="stretch"):
                             db.update_firma(fid, firma["nume_firma"], firma["tip_contract"],
                                             False, tip_f, firma.get("cantitate_default", 0))
-                            st.rerun()
+                            st.rerun(scope="fragment")
                     else:
                         if col_act.button("🟢 Reactivează", key=f"act_f_{fid}", width="stretch"):
                             db.update_firma(fid, firma["nume_firma"], firma["tip_contract"],
                                             True, tip_f, firma.get("cantitate_default", 0))
-                            st.rerun()
+                            st.rerun(scope="fragment")
 
                     if tip_f in ("ghiseu", "ghiseu_livrare"):
                         st.divider()
@@ -407,14 +407,14 @@ def show():
                         if col_btn.button("➕", key=f"btn_ang_{fid}", width="stretch"):
                             if nou_ang.strip():
                                 db.add_angajat(fid, nou_ang.strip())
-                                st.rerun()
+                                st.rerun(scope="fragment")
 
                         for ang in activi_ang:
                             ca, cb = st.columns([5, 1])
                             ca.write(f"👤 {ang['nume_angajat']}")
                             if cb.button("Concediu", key=f"conc_{ang['id']}", width="stretch"):
                                 db.toggle_angajat(ang["id"], False)
-                                st.rerun()
+                                st.rerun(scope="fragment")
 
                         if inactivi_ang:
                             st.caption(f"💤 Inactivi ({len(inactivi_ang)}):")
@@ -423,7 +423,7 @@ def show():
                                 ca.write(f"💤 {ang['nume_angajat']}")
                                 if cb.button("Reactivează", key=f"react_{ang['id']}", width="stretch"):
                                     db.toggle_angajat(ang["id"], True)
-                                    st.rerun()
+                                    st.rerun(scope="fragment")
 
             st.divider()
 
@@ -473,7 +473,7 @@ def show():
                 if c5.button(label_btn, key=f"btn_rez_{fid}",
                              width="stretch", type=btn_type):
                     db.save_rezervare_firma(fid, data_azi, qty)
-                    st.rerun()
+                    st.rerun(scope="fragment")
 
             st.divider()
             if total_rez:

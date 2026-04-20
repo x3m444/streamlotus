@@ -17,6 +17,14 @@ import utils
 from datetime import date
 
 
+@st.cache_data
+def _excel_bytes(plan_json: str) -> bytes:
+    """Cache Excel generation — regenerate only when plan data changes."""
+    import json
+    df = pd.DataFrame(json.loads(plan_json))
+    return utils.export_to_excel_landscape_v2(df)
+
+
 @st.fragment
 def show(data_plan):
     """Randeaza sectiunea de planificare pentru saptamana care contine data_plan."""
@@ -56,7 +64,7 @@ def show(data_plan):
                     tip_plan="pranz"
                 )
                 st.success("Planificat: Prânz ✅")
-                st.rerun()
+                st.rerun(scope="fragment")
             else:
                 st.error("Selectează toate componentele prânzului!")
 
@@ -86,7 +94,7 @@ def show(data_plan):
                 db.salveaza_planificare(data_plan, [sel_f2_c['id'], sel_sal_c['id']], tip_plan="cina")
                 st.success(f"Cina pentru {nume_zi_ro} a fost salvată! ✅")
                 st.toast(f"Cina pentru {nume_zi_ro} salvată!", icon="✅")
-                st.rerun()
+                st.rerun(scope="fragment")
             else:
                 st.error("⚠️ Alege atât felul principal cât și salata!")
 
@@ -105,7 +113,7 @@ def show(data_plan):
             if sel_sw_zi:
                 db.salveaza_planificare(data_plan, [s['id'] for s in sel_sw_zi], tip_plan="sandwich")
                 st.success("Planificat: Sandwich-uri ✅")
-                st.rerun()
+                st.rerun(scope="fragment")
             else:
                 st.error("⚠️ Selectează cel puțin un sandwich!")
 
@@ -195,8 +203,8 @@ def show(data_plan):
                 "🌙 MENIU CINĂ":  fmt_produse(m_cina)  or "---",
             })
 
-        df_export = pd.DataFrame(rows_export)
-        excel_file = utils.export_to_excel_landscape_v2(df_export)
+        import json
+        excel_file = _excel_bytes(json.dumps(rows_export, default=str))
 
         st.download_button(
             label="🖨️ Descarcă Meniu Landscape (Cantina LOTUS)",

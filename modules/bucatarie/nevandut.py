@@ -63,7 +63,7 @@ def show(data_selectata):
                         else:
                             db.sterge_nevandut(data_selectata, nume)
                             st.info(f"Șters: {nume}")
-                        st.rerun()
+                        st.rerun(scope="fragment")
 
     # Sumar nevandute declarate
     if nevandut_curent:
