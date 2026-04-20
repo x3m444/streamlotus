@@ -511,12 +511,17 @@ def show():
                         st.markdown(f"{tip_icon} **{r['nume_angajat']}** — {r['produse']}  `{ora}`")
 
             st.divider()
-            excel_firme = utils.export_raport_firme(serviri, data_raport)
-            st.download_button(
-                "📥 Export Raport Firme (Excel — un sheet per firmă)",
-                data=excel_firme,
-                file_name=f"Raport_Firme_{data_raport.strftime('%d%m%Y')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                width="stretch",
+            if st.button("🖨️ Pregătește Raport Firme", key="btn_gen_firme", width="stretch"):
+                st.session_state["excel_firme"] = {
+                    "data": utils.export_raport_firme(serviri, data_raport),
+                    "nume": f"Raport_Firme_{data_raport.strftime('%d%m%Y')}.xlsx",
+                }
+            if "excel_firme" in st.session_state:
+                st.download_button(
+                    "📥 Export Raport Firme (Excel — un sheet per firmă)",
+                    data=st.session_state["excel_firme"]["data"],
+                    file_name=st.session_state["excel_firme"]["nume"],
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    width="stretch",
                 type="primary",
             )

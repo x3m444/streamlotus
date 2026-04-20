@@ -169,7 +169,7 @@ def show(data_plan):
                         _show_produse_breakdown(date_tip['produse'])
 
         # -------------------------------------------------------
-        # EXPORT REZUMAT ZILNIC
+        # EXPORT REZUMAT ZILNIC — on demand
         # -------------------------------------------------------
         rows_export = []
         for tip, date_tip in sectii.items():
@@ -182,41 +182,52 @@ def show(data_plan):
                     "Total porții": total,
                 })
         if rows_export:
-            df_zilnic = pd.DataFrame(rows_export)
-            rows_fin = [{"Secție": tip, "Vânzări (lei)": d["bani"], "Nr. comenzi": sum(d["comenzi_st"].values())}
-                        for tip, d in sectii.items()]
-            df_fin = pd.DataFrame(rows_fin)
-
             data_str = data_plan.strftime('%d.%m.%Y')
             col_exp1, col_exp2 = st.columns(2)
+
             with col_exp1:
-                excel_cantitati = utils.export_raport_excel(
-                    df_zilnic,
-                    titlu=f"Raport Cantități — {data_str}",
-                    subtitlu=f"Situație producție și distribuție porții • {data_str}",
-                    sheet_name="Cantități",
-                )
-                st.download_button(
-                    "📥 Export Cantități Zilnice",
-                    data=excel_cantitati,
-                    file_name=f"Cantitati_{data_plan.strftime('%d%m%Y')}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    width="stretch",
-                )
+                if st.button("🖨️ Pregătește Cantități", key="btn_gen_cant", width="stretch"):
+                    df_zilnic = pd.DataFrame(rows_export)
+                    st.session_state["excel_cantitati"] = {
+                        "data": utils.export_raport_excel(
+                            df_zilnic,
+                            titlu=f"Raport Cantități — {data_str}",
+                            subtitlu=f"Situație producție și distribuție porții • {data_str}",
+                            sheet_name="Cantități",
+                        ),
+                        "nume": f"Cantitati_{data_plan.strftime('%d%m%Y')}.xlsx",
+                    }
+                if "excel_cantitati" in st.session_state:
+                    st.download_button(
+                        "📥 Export Cantități Zilnice",
+                        data=st.session_state["excel_cantitati"]["data"],
+                        file_name=st.session_state["excel_cantitati"]["nume"],
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        width="stretch",
+                    )
+
             with col_exp2:
-                excel_financiar = utils.export_raport_excel(
-                    df_fin,
-                    titlu=f"Raport Financiar — {data_str}",
-                    subtitlu=f"Vânzări și încasări pe secții • {data_str}",
-                    sheet_name="Financiar",
-                )
-                st.download_button(
-                    "📥 Export Financiar Zilnic",
-                    data=excel_financiar,
-                    file_name=f"Financiar_{data_plan.strftime('%d%m%Y')}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    width="stretch",
-                )
+                if st.button("🖨️ Pregătește Financiar", key="btn_gen_fin", width="stretch"):
+                    rows_fin = [{"Secție": tip, "Vânzări (lei)": d["bani"], "Nr. comenzi": sum(d["comenzi_st"].values())}
+                                for tip, d in sectii.items()]
+                    df_fin = pd.DataFrame(rows_fin)
+                    st.session_state["excel_financiar"] = {
+                        "data": utils.export_raport_excel(
+                            df_fin,
+                            titlu=f"Raport Financiar — {data_str}",
+                            subtitlu=f"Vânzări și încasări pe secții • {data_str}",
+                            sheet_name="Financiar",
+                        ),
+                        "nume": f"Financiar_{data_plan.strftime('%d%m%Y')}.xlsx",
+                    }
+                if "excel_financiar" in st.session_state:
+                    st.download_button(
+                        "📥 Export Financiar Zilnic",
+                        data=st.session_state["excel_financiar"]["data"],
+                        file_name=st.session_state["excel_financiar"]["nume"],
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        width="stretch",
+                    )
 
         # -------------------------------------------------------
         # 3. LISTA DETALIATA PE COMENZI
