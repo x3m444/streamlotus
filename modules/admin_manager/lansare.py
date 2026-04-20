@@ -111,7 +111,7 @@ def show(data_plan):
                     for i, item in enumerate(st.session_state.buffer_pranz):
                         c_txt, c_del = st.columns([4, 1])
                         c_txt.write(f"**{item['cantitate']}** x {item['nume']}")
-                        if c_del.button("❌", key=f"del_p_f_{i}"):
+                        if c_del.button("🗑️", key=f"del_p_f_{i}"):
                             st.session_state.buffer_pranz.pop(i)
                     if st.button("🚀 Confirmă și Salvează Lot Prânz", type="primary", width="stretch"):
                         total_lot = sum(i["cantitate"] * float(i["pret"]) for i in st.session_state.buffer_pranz)
@@ -155,7 +155,7 @@ def show(data_plan):
                     for i, item in enumerate(st.session_state.buffer_cina):
                         c_txt, c_del = st.columns([4, 1])
                         c_txt.write(f"**{item['cantitate']}** x {item['nume']} ({item['pret']} lei/buc)")
-                        if c_del.button("❌", key=f"del_cina_item_v3_{i}"):
+                        if c_del.button("🗑️", key=f"del_cina_item_v3_{i}"):
                             st.session_state.buffer_cina.pop(i)
                     col_confirm, col_clear = st.columns(2)
                     with col_confirm:
