@@ -17,14 +17,6 @@ import utils
 from datetime import date
 
 
-@st.cache_data
-def _excel_bytes(plan_json: str) -> bytes:
-    """Cache Excel generation — regenerate only when plan data changes."""
-    import json
-    df = pd.DataFrame(json.loads(plan_json))
-    return utils.export_to_excel_landscape_v2(df)
-
-
 @st.fragment
 def show(data_plan):
     """Randeaza sectiunea de planificare pentru saptamana care contine data_plan."""
@@ -64,6 +56,7 @@ def show(data_plan):
                     tip_plan="pranz"
                 )
                 st.success("Planificat: Prânz ✅")
+                st.session_state.pop("excel_planificare", None)
                 st.rerun(scope="fragment")
             else:
                 st.error("Selectează toate componentele prânzului!")
@@ -94,6 +87,7 @@ def show(data_plan):
                 db.salveaza_planificare(data_plan, [sel_f2_c['id'], sel_sal_c['id']], tip_plan="cina")
                 st.success(f"Cina pentru {nume_zi_ro} a fost salvată! ✅")
                 st.toast(f"Cina pentru {nume_zi_ro} salvată!", icon="✅")
+                st.session_state.pop("excel_planificare", None)
                 st.rerun(scope="fragment")
             else:
                 st.error("⚠️ Alege atât felul principal cât și salata!")
@@ -113,6 +107,7 @@ def show(data_plan):
             if sel_sw_zi:
                 db.salveaza_planificare(data_plan, [s['id'] for s in sel_sw_zi], tip_plan="sandwich")
                 st.success("Planificat: Sandwich-uri ✅")
+                st.session_state.pop("excel_planificare", None)
                 st.rerun(scope="fragment")
             else:
                 st.error("⚠️ Selectează cel puțin un sandwich!")
@@ -181,14 +176,13 @@ def show(data_plan):
     st.markdown(tabel_html, unsafe_allow_html=True)
 
     # -------------------------------------------------------
-    # EXPORT EXCEL LANDSCAPE
+    # EXPORT EXCEL LANDSCAPE — on demand
     # -------------------------------------------------------
-    try:
-        rows_export = []
-        for zi in zile_sapt:
-            m_pranz = plan_saptamanal.get((str(zi), "pranz"), [])
-            m_cina  = plan_saptamanal.get((str(zi), "cina"),  [])
+    st.divider()
+    col_gen, col_dl = st.columns([1, 2])
 
+    if col_gen.button("🖨️ Pregătește Excel", key="btn_gen_excel", width="stretch"):
+        try:
             def fmt_produse(lista):
                 return "\n".join([
                     f"• {p['nume']} ({int(p['pret_standard'])} lei)"
@@ -197,21 +191,26 @@ def show(data_plan):
                     for p in lista
                 ])
 
-            rows_export.append({
-                "DATA / ZIUA": f"{utils.format_nume_zi(zi)}\n{zi.strftime('%d.%m')}",
-                "🥣 MENIU PRÂNZ": fmt_produse(m_pranz) or "---",
-                "🌙 MENIU CINĂ":  fmt_produse(m_cina)  or "---",
-            })
+            rows_export = []
+            for zi in zile_sapt:
+                rows_export.append({
+                    "DATA / ZIUA": f"{utils.format_nume_zi(zi)}\n{zi.strftime('%d.%m')}",
+                    "🥣 MENIU PRÂNZ": fmt_produse(plan_saptamanal.get((str(zi), "pranz"), [])) or "---",
+                    "🌙 MENIU CINĂ":  fmt_produse(plan_saptamanal.get((str(zi), "cina"),  [])) or "---",
+                })
 
-        import json
-        excel_file = _excel_bytes(json.dumps(rows_export, default=str))
+            st.session_state.excel_planificare = {
+                "data": utils.export_to_excel_landscape_v2(pd.DataFrame(rows_export)),
+                "nume": f"Meniu_Lotus_{zile_sapt[0].strftime('%d_%m')}.xlsx",
+            }
+        except Exception as e:
+            st.error(f"Eroare la generare Excel: {e}")
 
-        st.download_button(
-            label="🖨️ Descarcă Meniu Landscape (Cantina LOTUS)",
-            data=excel_file,
-            file_name=f"Meniu_Lotus_{zile_sapt[0].strftime('%d_%m')}.xlsx",
+    if "excel_planificare" in st.session_state:
+        col_dl.download_button(
+            label="📥 Descarcă Meniu Landscape (Cantina LOTUS)",
+            data=st.session_state.excel_planificare["data"],
+            file_name=st.session_state.excel_planificare["nume"],
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             width="stretch"
         )
-    except Exception as e:
-        st.error(f"Eroare la generare Excel: {e}")
