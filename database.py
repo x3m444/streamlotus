@@ -272,6 +272,7 @@ def get_rezumat_zi(data_filtrare=None, tip_comanda=None, status_filtru=None):
                 c.tip_comanda,
                 c.total_plata,
                 c.ora_livrare_estimata,
+                c.observatii,
                 string_agg(l.cantitate || 'x ' || l.nume_produs || '|' || l.status, ', ') AS detalii
             FROM comenzi c
             JOIN clienti cl ON c.client_id = cl.id
@@ -291,7 +292,7 @@ def get_rezumat_zi(data_filtrare=None, tip_comanda=None, status_filtru=None):
             GROUP BY
                 c.id, c.client_id, c.status, c.sofer, cl.nume_client, cl.telefon,
                 cl.adresa_principala, c.metoda_plata, c.tip_comanda,
-                c.total_plata, c.ora_livrare_estimata
+                c.total_plata, c.ora_livrare_estimata, c.observatii
             ORDER BY (c.client_id = 999) DESC, c.ora_livrare_estimata
         """
         return [dict(r._mapping) for r in conn.execute(text(query), params)]

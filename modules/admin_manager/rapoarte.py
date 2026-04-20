@@ -239,9 +239,11 @@ def show(data_plan):
                 order_status = cz.get('status_comanda', 'nou')
                 st_emoji     = STATUS_COMANDA_EMOJI.get(order_status, '❓')
                 tip_label    = TIP_LOT_LABEL.get(cz['tip_comanda'], f"📦 {cz['tip_comanda'].upper()}")
+                descriere    = cz.get('observatii') or ""
                 titlu = (
                     f"{tip_label}  |  {ora}  |  "
                     f"{cz.get('total_plata', 0):.0f} lei  |  {st_emoji} {order_status.upper()}"
+                    + (f"  |  📝 {descriere}" if descriere else "")
                 )
                 with st.expander(titlu):
                     col_stanga, col_dreapta = st.columns([3, 1])
