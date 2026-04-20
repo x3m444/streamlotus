@@ -119,6 +119,8 @@ def show(data_plan):
                                                "INTERN", "12:00", "Lot Producție Prânz",
                                                "cantina", "pranz", data_plan)
                         st.session_state.buffer_pranz = []
+                        for k in ["sel_p_final", "qty_p_final"]:
+                            st.session_state.pop(k, None)
                         st.rerun(scope="fragment")
 
     # ── CINĂ ─────────────────────────────────────────────────
@@ -165,6 +167,8 @@ def show(data_plan):
                                                    "INTERN", "19:00", "Lot Producție Cină",
                                                    "cantina", "cina", data_plan)
                             st.session_state.buffer_cina = []
+                            for k in ["sel_cina_prod_v3", "qty_cina_val_v3"]:
+                                st.session_state.pop(k, None)
                             st.rerun(scope="fragment")
                     with col_clear:
                         if st.button("🗑️ Golește lista", key="clear_cina_all_v3", width="stretch"):
@@ -216,4 +220,6 @@ def show(data_plan):
                     db.save_comanda_finala(999, st.session_state.buffer_special, total_spec,
                                            "INTERN", "08:00", desc_spec, "cantina", "eveniment", data_plan)
                     st.session_state.buffer_special = []
+                    for k in ["obs_spec", "spec_cat", "p_spec", "q_spec"]:
+                        st.session_state.pop(k, None)
                     st.rerun(scope="fragment")
