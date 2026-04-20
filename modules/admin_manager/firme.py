@@ -63,6 +63,11 @@ def show():
         data_lansare = st.date_input("Data livrare:", data_azi, key="lansare_firma_data")
         livratori    = db.get_lista_livratori()
 
+        # Resetare edit_lansare la schimbarea datei
+        if st.session_state.get("_firme_lansare_data") != data_lansare:
+            st.session_state["_firme_lansare_data"] = data_lansare
+            st.session_state["edit_lansare"] = set()
+
         if not livratori:
             st.warning("Nu există livratori configurați.")
             return
@@ -83,7 +88,6 @@ def show():
             salata = lista_sal[0] if lista_sal           else None
 
             lansate = db.get_comenzi_lansate_firme(data_lansare)
-            # set de firma_id-uri in modul edit (stergere + relansare)
             if "edit_lansare" not in st.session_state:
                 st.session_state["edit_lansare"] = set()
 
