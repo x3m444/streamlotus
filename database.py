@@ -673,7 +673,7 @@ def get_loturi_lansate(data):
     engine = get_engine()
     with engine.connect() as conn:
         res = conn.execute(text("""
-            SELECT id, tip_comanda, ora_livrare_estimata, detalii_comanda, total_plata, status
+            SELECT id, tip_comanda, ora_livrare_estimata, detalii_comanda, observatii, total_plata, status
             FROM comenzi
             WHERE data_comanda = :data
               AND client_id = 999
@@ -685,11 +685,12 @@ def get_loturi_lansate(data):
             row = dict(r._mapping)
             tip = row["tip_comanda"]
             entry = {
-                "comanda_id": row["id"],
-                "ora":        str(row["ora_livrare_estimata"])[:5],
-                "detalii":    row["detalii_comanda"],
-                "total":      row["total_plata"],
-                "status":     row["status"],
+                "comanda_id":  row["id"],
+                "ora":         str(row["ora_livrare_estimata"])[:5],
+                "detalii":     row["detalii_comanda"],
+                "descriere":   row["observatii"],
+                "total":       row["total_plata"],
+                "status":      row["status"],
             }
             result.setdefault(tip, []).append(entry)
         return result

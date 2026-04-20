@@ -22,10 +22,10 @@ def _card_lot(lot, key_prefix, buffer_key, label="Lot"):
         c_n, c_info, c_ed, c_del = st.columns([2.5, 5, 1.2, 1.2])
         c_n.markdown(f"**{label}**")
         c_n.markdown(":green[✅ Lansat]")
-        detalii_str = f"  |  {lot['detalii']}" if lot.get("detalii") else ""
+        descriere_str = lot.get("descriere") or lot.get("detalii") or ""
         c_info.caption(
-            f"🕐 {lot['ora']}  |  💰 {lot['total']:.0f} lei  |  "
-            f"{lot['status'].upper()}{detalii_str}"
+            f"🕐 {lot['ora']}  |  💰 {lot['total']:.0f} lei  |  {lot['status'].upper()}"
+            + (f"  |  📝 {descriere_str}" if descriere_str else "")
         )
         if c_ed.button("✏️ Edit", key=f"edit_{key_prefix}_{comanda_id}", width="stretch"):
             produse_lot = db.get_produse_comanda(comanda_id)
