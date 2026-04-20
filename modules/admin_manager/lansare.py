@@ -170,18 +170,17 @@ def show(data_plan):
                         if st.button("🗑️ Golește lista", key="clear_cina_all_v3", width="stretch"):
                             st.session_state.buffer_cina = []
 
-    # ── SPECIAL / EVENIMENT ───────────────────────────────────
+    # ── EVENIMENT ─────────────────────────────────────────────
     loturi_spec_ev = loturi_lansate.get("special", []) + loturi_lansate.get("eveniment", [])
     status_spec    = f"  ✅ {len(loturi_spec_ev)} lansat(e)" if loturi_spec_ev else ""
-    with st.expander(f"✨ LANSARE COMANDĂ SPECIALĂ (PROTOCOL / EVENIMENT){status_spec}", expanded=False):
+    with st.expander(f"🎉 LANSARE EVENIMENT (PROTOCOL / CATERING){status_spec}", expanded=False):
         if loturi_spec_ev:
-            st.markdown("**Comenzi speciale lansate:**")
+            st.markdown("**Evenimente lansate:**")
             for lot in loturi_spec_ev:
-                _card_lot(lot, "spec", buffer_key="buffer_special", label=lot.get("detalii") or lot["status"].upper())
+                _card_lot(lot, "spec", buffer_key="buffer_special", label=lot.get("descriere") or lot.get("detalii") or "Eveniment")
             st.divider()
 
-        tip_spec  = st.radio("Tip:", ["special", "eveniment"], horizontal=True, key="rad_spec")
-        desc_spec = st.text_input("📍 Descriere OBLIGATORIE (ex: Botez Popescu):", key="obs_spec")
+        desc_spec = st.text_input("📍 Descriere OBLIGATORIE (ex: Botez Popescu, Nuntă Ion):", key="obs_spec")
 
         if "buffer_special" not in st.session_state:
             st.session_state.buffer_special = []
@@ -209,12 +208,12 @@ def show(data_plan):
                 col_t.write(f"✅ {item['nume']} x {item['cantitate']} ({item['pret']} lei/buc)")
                 if col_r.button("🗑️", key=f"del_spec_{i}"):
                     st.session_state.buffer_special.pop(i)
-            if st.button(f"🚀 Lansează {tip_spec.upper()}", width="stretch", type="primary"):
+            if st.button("🚀 Lansează Eveniment", width="stretch", type="primary"):
                 if not desc_spec:
                     st.error("⚠️ Lipsește descrierea!")
                 else:
                     total_spec = sum(i["cantitate"] * float(i.get("pret", 0)) for i in st.session_state.buffer_special)
                     db.save_comanda_finala(999, st.session_state.buffer_special, total_spec,
-                                           "INTERN", "08:00", desc_spec, "cantina", tip_spec, data_plan)
+                                           "INTERN", "08:00", desc_spec, "cantina", "eveniment", data_plan)
                     st.session_state.buffer_special = []
                     st.rerun(scope="fragment")
