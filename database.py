@@ -113,7 +113,6 @@ def delete_produs(id_produs):
 
 
 def salveaza_planificare(data_zi, produse_ids, tip_plan="pranz"):
-    st.cache_data.clear()
     """Suprascrie planificarea pentru ziua si tipul dat (delete + insert)."""
     engine = get_engine()
     with engine.begin() as conn:
@@ -126,6 +125,7 @@ def salveaza_planificare(data_zi, produse_ids, tip_plan="pranz"):
                 text("INSERT INTO planificare_meniu (data_zi, produs_id, tip_plan) VALUES (:d, :p, :t)"),
                 {"d": data_zi, "p": pid, "t": tip_plan}
             )
+    get_meniu_planificat.clear()
 
 
 # =============================================================

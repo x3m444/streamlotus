@@ -27,8 +27,6 @@ def show(data_selectata=None):
             key="data_comanda_selector"
         )
 
-    plan_zi = db.get_meniu_planificat(data_selectata)
-
     client_id = None
     nume_client = ""
     telefon = ""
