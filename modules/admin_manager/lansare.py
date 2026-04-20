@@ -114,7 +114,7 @@ def show(data_plan):
                         if c_del.button("❌", key=f"del_p_f_{i}"):
                             st.session_state.buffer_pranz.pop(i)
                     if st.button("🚀 Confirmă și Salvează Lot Prânz", type="primary", width="stretch"):
-                        total_lot = sum(i["cantitate"] * i["pret"] for i in st.session_state.buffer_pranz)
+                        total_lot = sum(i["cantitate"] * float(i["pret"]) for i in st.session_state.buffer_pranz)
                         db.save_comanda_finala(999, st.session_state.buffer_pranz, total_lot,
                                                "INTERN", "12:00", "Lot Producție Prânz",
                                                "cantina", "pranz", data_plan)
@@ -160,7 +160,7 @@ def show(data_plan):
                     col_confirm, col_clear = st.columns(2)
                     with col_confirm:
                         if st.button("🚀 Confirmă Producție Cină", type="primary", width="stretch"):
-                            total_cina = sum(i["cantitate"] * i.get("pret", 0) for i in st.session_state.buffer_cina)
+                            total_cina = sum(i["cantitate"] * float(i.get("pret", 0)) for i in st.session_state.buffer_cina)
                             db.save_comanda_finala(999, st.session_state.buffer_cina, total_cina,
                                                    "INTERN", "19:00", "Lot Producție Cină",
                                                    "cantina", "cina", data_plan)
@@ -177,7 +177,7 @@ def show(data_plan):
         if loturi_spec_ev:
             st.markdown("**Comenzi speciale lansate:**")
             for lot in loturi_spec_ev:
-                _card_lot(lot, "spec", label=lot.get("detalii") or lot["status"].upper())
+                _card_lot(lot, "spec", buffer_key="buffer_special", label=lot.get("detalii") or lot["status"].upper())
             st.divider()
 
         tip_spec  = st.radio("Tip:", ["special", "eveniment"], horizontal=True, key="rad_spec")
@@ -213,7 +213,7 @@ def show(data_plan):
                 if not desc_spec:
                     st.error("⚠️ Lipsește descrierea!")
                 else:
-                    total_spec = sum(i["cantitate"] * i.get("pret", 0) for i in st.session_state.buffer_special)
+                    total_spec = sum(i["cantitate"] * float(i.get("pret", 0)) for i in st.session_state.buffer_special)
                     db.save_comanda_finala(999, st.session_state.buffer_special, total_spec,
                                            "INTERN", "08:00", desc_spec, "cantina", tip_spec, data_plan)
                     st.session_state.buffer_special = []
