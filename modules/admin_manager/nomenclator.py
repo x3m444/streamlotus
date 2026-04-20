@@ -207,7 +207,7 @@ def show():
 
         with st.expander(f"{eticheta} — {len(produse_cat)} produse", expanded=False):
             df_cat = pd.DataFrame(produse_cat)[["id", "nume", "categorie", "pret_standard"]]
-            df_cat = df_cat.reset_index(drop=True)
+            df_cat = df_cat.sort_values("nume").reset_index(drop=True)
             df_cat["șterge"] = False
 
             edited_cat = st.data_editor(
