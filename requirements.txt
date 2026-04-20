@@ -5,3 +5,4 @@ sqlalchemy
 xlsxwriter
 bcrypt
 extra-streamlit-components
+openpyxl
