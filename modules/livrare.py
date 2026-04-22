@@ -112,21 +112,32 @@ def _render_card_livrare(cmd, actiune):
             ])
             st.caption(produse_txt)
 
-        # Buton actiune
-        if actiune == "preluat":
-            if st.button(
-                "🚚 Am preluat comanda",
-                key=f"preluat_{cmd['id']}",
-                width="stretch"
-            ):
-                db.update_status_comanda(engine, cmd['id'], 'pedrum')
-                st.rerun(scope="fragment")
+        # Butoane actiune + aviz
+        col_act, col_aviz_btn, col_aviz_dl = st.columns([2, 1.5, 1.5])
 
-        elif actiune == "livrat":
-            if st.button(
-                "✅ Livrat!",
-                key=f"livrat_{cmd['id']}",
-                width="stretch"
-            ):
-                db.update_status_comanda(engine, cmd['id'], 'livrat')
-                st.rerun(scope="fragment")
+        with col_act:
+            if actiune == "preluat":
+                if st.button("🚚 Am preluat comanda", key=f"preluat_{cmd['id']}", width="stretch"):
+                    db.update_status_comanda(engine, cmd['id'], 'pedrum')
+                    st.rerun(scope="fragment")
+            elif actiune == "livrat":
+                if st.button("✅ Livrat!", key=f"livrat_{cmd['id']}", width="stretch"):
+                    db.update_status_comanda(engine, cmd['id'], 'livrat')
+                    st.rerun(scope="fragment")
+
+        aviz_key = f"aviz_cmd_{cmd['id']}"
+        with col_aviz_btn:
+            if st.button("📋 Aviz", key=f"btn_{aviz_key}", width="stretch"):
+                st.session_state[aviz_key] = utils.genereaza_aviz_excel(
+                    [cmd], sofer, data_azi
+                )
+        with col_aviz_dl:
+            if aviz_key in st.session_state:
+                st.download_button(
+                    "📥 Descarcă",
+                    data=st.session_state[aviz_key],
+                    file_name=f"Aviz_{cmd['id']}_{data_azi.strftime('%d%m%Y')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key=f"dl_{aviz_key}",
+                    width="stretch",
+                )

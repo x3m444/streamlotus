@@ -75,7 +75,7 @@ def show(data_selectata, engine):
                                 width="stretch",
                             ):
                                 db.update_status_batch(engine, data_selectata, nume, "gatit")
-                                st.rerun(scope="fragment")
+                                st.rerun(scope="app")
                         else:
                             if st.button(
                                 f"🔄 Reset {nume}",
@@ -83,7 +83,7 @@ def show(data_selectata, engine):
                                 width="stretch"
                             ):
                                 db.update_status_batch(engine, data_selectata, nume, "nou")
-                                st.rerun(scope="fragment")
+                                st.rerun(scope="app")
 
     # -------------------------------------------------------
     # 2. COMENZI SPECIALE DE LA RECEPTIE
@@ -131,7 +131,7 @@ def show(data_selectata, engine):
                             width="stretch",
                         ):
                             db.update_status_batch(engine, data_selectata, nume, "gatit")
-                            st.rerun(scope="fragment")
+                            st.rerun(scope="app")
                     else:
                         if st.button(
                             f"🔄 Reset {nume}",
@@ -139,4 +139,4 @@ def show(data_selectata, engine):
                             width="stretch"
                         ):
                             db.update_status_batch(engine, data_selectata, nume, "nou")
-                            st.rerun(scope="fragment")
+                            st.rerun(scope="app")

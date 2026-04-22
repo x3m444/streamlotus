@@ -88,9 +88,34 @@ def _show_produse_breakdown(produse_dict):
         st.markdown(f"**{produs}** — {total} buc  ·  {breakdown}")
 
 
+def _format_ts(ts):
+    """Formateaza timestamp UTC → ora romaneasca (UTC+3). Returneaza 'HH:MM' sau None."""
+    if ts is None:
+        return None
+    from datetime import timezone, timedelta
+    if hasattr(ts, 'tzinfo') and ts.tzinfo is not None:
+        ro = ts.astimezone(timezone(timedelta(hours=3)))
+        return ro.strftime("%H:%M")
+    return ts.strftime("%H:%M")
+
+
+def _show_timeline(cz):
+    """Afiseaza timeline-ul comenzii: creare → gatire → ambalare → preluare → livrare."""
+    steps = [
+        ("📥 Creată",   cz.get("created_at")),
+        ("🍳 Gătită",   cz.get("gatit_la")),
+        ("📦 Ambalată", cz.get("pregatit_la")),
+        ("🚀 Preluată", cz.get("pedrum_la")),
+        ("✅ Livrată",  cz.get("livrat_la")),
+    ]
+    parts = [f"{label}: **{_format_ts(ts)}**" for label, ts in steps if _format_ts(ts)]
+    if parts:
+        st.caption("⏱️ " + "  →  ".join(parts))
+
+
 # ------------------------------------------------------------------
 
-@st.fragment
+@st.fragment(run_every=15)
 def show(data_plan):
     """Randeaza sectiunea de monitorizare pentru data_plan."""
     st.subheader("📊 Control General Producție & Livrări")
@@ -272,6 +297,7 @@ def show(data_plan):
                                         st.write(f"• {produs_full.strip()}")
                                 except Exception:
                                     st.write(f"• {linie}")
+                        _show_timeline(cz)
                     with col_dreapta:
                         if st.button("🗑️ Șterge", key=f"admin_del_lot_{cz['id']}", width="stretch"):
                             if db.delete_comanda(cz['id']):
@@ -309,6 +335,7 @@ def show(data_plan):
                                     st.write(f"• {linie}")
                         else:
                             st.caption("Fără produse")
+                        _show_timeline(cz)
                         st.divider()
                         sofer_cap = f"  |  🚗 {cz['sofer']}" if cz.get('sofer') else ""
                         st.caption(f"📞 {cz.get('telefon', 'N/A')} | 💳 {cz.get('metoda_plata', '').upper()}{sofer_cap}")
@@ -321,6 +348,22 @@ def show(data_plan):
                         if st.button("🗑️ Șterge", key=f"admin_del_{cz['id']}", width="stretch"):
                             if db.delete_comanda(cz['id']):
                                 st.rerun(scope="fragment")
+                        if cz.get('tip_comanda') == 'livrare':
+                            aviz_key = f"aviz_admin_{cz['id']}"
+                            if st.button("📋 Aviz", key=f"btn_{aviz_key}", width="stretch"):
+                                sofer_aviz = cz.get('sofer') or "Fără șofer"
+                                st.session_state[aviz_key] = utils.genereaza_aviz_excel(
+                                    [cz], sofer_aviz, data_plan
+                                )
+                            if aviz_key in st.session_state:
+                                st.download_button(
+                                    "📥 Descarcă",
+                                    data=st.session_state[aviz_key],
+                                    file_name=f"Aviz_{cz['id']}_{data_plan.strftime('%d%m%Y')}.xlsx",
+                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                    key=f"dl_{aviz_key}",
+                                    width="stretch",
+                                )
 
         # -------------------------------------------------------
         # 4. SERVIRI FIRME GHIȘEU

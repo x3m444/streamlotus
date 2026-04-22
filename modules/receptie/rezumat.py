@@ -8,6 +8,28 @@ Afiseaza totalul de incasat si permite stergerea comenzilor.
 import streamlit as st
 import database as db
 import utils
+from datetime import timezone, timedelta
+
+_RO = timezone(timedelta(hours=3))
+
+def _fmt_ts(ts):
+    if ts is None:
+        return None
+    if hasattr(ts, 'tzinfo') and ts.tzinfo is not None:
+        return ts.astimezone(_RO).strftime("%H:%M")
+    return ts.strftime("%H:%M")
+
+def _timeline(cz):
+    steps = [
+        ("📥", cz.get("created_at")),
+        ("🍳", cz.get("gatit_la")),
+        ("📦", cz.get("pregatit_la")),
+        ("🚀", cz.get("pedrum_la")),
+        ("✅", cz.get("livrat_la")),
+    ]
+    parts = [f"{icon} {_fmt_ts(ts)}" for icon, ts in steps if _fmt_ts(ts)]
+    if parts:
+        st.caption("  →  ".join(parts))
 
 
 def show():
@@ -83,6 +105,7 @@ def show():
                                     st.markdown(f"⏳ :orange[{produs_txt.strip()}]")
                             except Exception:
                                 st.write(f"• {parte}")
+                        _timeline(cz)
 
                     with c4:
                         metoda = cz.get('metoda_plata', '')

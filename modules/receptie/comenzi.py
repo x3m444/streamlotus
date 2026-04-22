@@ -307,4 +307,4 @@ def show(data_selectata=None):
             if succes:
                 st.success(f"✅ Comandă salvată pentru {data_selectata.strftime('%d/%m/%Y')}! Livrator: {sofer}")
                 st.session_state.buffer_comanda = []
-                st.rerun(scope="fragment")
+                st.rerun(scope="app")

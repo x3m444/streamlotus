@@ -527,6 +527,175 @@ def export_raport_firme(serviri, data):
     return output.getvalue()
 
 
+def genereaza_aviz_excel(comenzi: list, sofer: str, data) -> bytes:
+    """Genereaza aviz de expeditie marfa Excel pentru un sofer."""
+    output = io.BytesIO()
+    FONT     = "Segoe UI"
+    GRI_HDR  = "#3D3D3D"
+    GRI_ALT  = "#EBEBEB"
+    GRI_BRD  = "#AAAAAA"
+    GRI_FOOT = "#888888"
+    data_str = data.strftime("%d.%m.%Y") if hasattr(data, "strftime") else str(data)
+    data_gen = get_ro_time().strftime("%d.%m.%Y %H:%M")
+
+    COL_HEADERS = ["Nr.", "Client", "Adresă", "Telefon", "Produse", "Total (lei)", "Plată"]
+    COL_W       = [5, 22, 30, 14, 38, 12, 10]
+    NC          = len(COL_HEADERS)
+
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        workbook = writer.book
+        ws = workbook.add_worksheet("Aviz")
+        writer.sheets["Aviz"] = ws
+
+        ws.set_portrait()
+        ws.set_margins(0.4, 0.4, 0.5, 0.5)
+        ws.set_print_scale(95)
+        ws.center_horizontally()
+        ws.repeat_rows(0, 4)
+
+        for ci, w in enumerate(COL_W):
+            ws.set_column(ci, ci, w)
+
+        fmt_brand = workbook.add_format({
+            "bold": True, "font_size": 16, "font_name": FONT, "valign": "vcenter",
+        })
+        fmt_contact = workbook.add_format({
+            "font_size": 8, "font_color": GRI_FOOT, "font_name": FONT,
+            "align": "right", "valign": "vcenter", "text_wrap": True,
+        })
+        fmt_titlu = workbook.add_format({
+            "bold": True, "font_size": 13, "font_name": FONT,
+            "align": "center", "valign": "vcenter",
+            "fg_color": GRI_HDR, "font_color": "white",
+        })
+        fmt_info = workbook.add_format({
+            "font_size": 9, "font_name": FONT,
+            "align": "center", "valign": "vcenter",
+            "fg_color": "#F5F5F5", "italic": True,
+        })
+        fmt_sep = workbook.add_format({"bottom": 2, "bottom_color": "#555555"})
+        fmt_col_hdr = workbook.add_format({
+            "bold": True, "font_size": 10, "font_name": FONT,
+            "fg_color": GRI_HDR, "font_color": "white",
+            "align": "center", "valign": "vcenter",
+            "border": 1, "border_color": GRI_HDR, "text_wrap": True,
+        })
+        fmt_cell = workbook.add_format({
+            "font_size": 10, "font_name": FONT,
+            "border": 1, "border_color": GRI_BRD, "valign": "top", "text_wrap": True,
+        })
+        fmt_cell_alt = workbook.add_format({
+            "font_size": 10, "font_name": FONT, "fg_color": GRI_ALT,
+            "border": 1, "border_color": GRI_BRD, "valign": "top", "text_wrap": True,
+        })
+        fmt_num = workbook.add_format({
+            "bold": True, "font_size": 10, "font_name": FONT,
+            "border": 1, "border_color": GRI_BRD,
+            "valign": "top", "align": "right", "num_format": "#,##0.00",
+        })
+        fmt_num_alt = workbook.add_format({
+            "bold": True, "font_size": 10, "font_name": FONT, "fg_color": GRI_ALT,
+            "border": 1, "border_color": GRI_BRD,
+            "valign": "top", "align": "right", "num_format": "#,##0.00",
+        })
+        fmt_total_txt = workbook.add_format({
+            "bold": True, "font_size": 10, "font_name": FONT,
+            "fg_color": "#D5D8DC", "border": 1, "border_color": GRI_HDR, "valign": "vcenter",
+        })
+        fmt_total_num = workbook.add_format({
+            "bold": True, "font_size": 10, "font_name": FONT,
+            "fg_color": "#D5D8DC", "border": 1, "border_color": GRI_HDR,
+            "valign": "vcenter", "align": "right", "num_format": "#,##0.00",
+        })
+        fmt_sig = workbook.add_format({
+            "bold": True, "font_size": 10, "font_name": FONT, "valign": "vcenter",
+        })
+        fmt_footer_sep = workbook.add_format({"top": 1, "top_color": "#555555"})
+        fmt_footer = workbook.add_format({
+            "font_size": 8, "font_name": FONT, "font_color": GRI_FOOT,
+            "italic": True, "align": "center", "valign": "vcenter", "fg_color": "#F5F5F5",
+        })
+
+        # R0: brand + contact
+        ws.set_row(0, 32)
+        ws.merge_range(0, 0, 0, 4, "CANTINA LOTUS", fmt_brand)
+        ws.merge_range(0, 5, 0, NC - 1,
+                       "0746.358.018 | 0743.090.212\nStr. Ing. Dumitru Ivanov 18, Tulcea", fmt_contact)
+
+        # R1: titlu document
+        ws.set_row(1, 26)
+        ws.merge_range(1, 0, 1, NC - 1, "AVIZ DE EXPEDIȚIE MARFĂ", fmt_titlu)
+
+        # R2: info sofer + data
+        ws.set_row(2, 16)
+        ws.merge_range(2, 0, 2, NC - 1,
+                       f"Șofer: {sofer}  •  Data: {data_str}  •  Nr. comenzi: {len(comenzi)}", fmt_info)
+
+        # R3: separator
+        ws.set_row(3, 3)
+        for c in range(NC):
+            ws.write(3, c, "", fmt_sep)
+
+        # R4: header coloane
+        ws.set_row(4, 26)
+        for ci, h in enumerate(COL_HEADERS):
+            ws.write(4, ci, h, fmt_col_hdr)
+
+        # Comenzi
+        total_general = 0.0
+        for ri, cmd in enumerate(comenzi):
+            alt = (ri % 2 == 1)
+            detalii = cmd.get("detalii") or ""
+            produse_list = []
+            for parte in detalii.split(", "):
+                if "|" in parte:
+                    produse_list.append(parte.split("|")[0].strip())
+                elif parte.strip():
+                    produse_list.append(parte.strip())
+            produse_str = "\n".join(produse_list) if produse_list else "—"
+            total = float(cmd.get("total_plata", 0))
+            total_general += total
+            ws.set_row(5 + ri, max(15 * max(len(produse_list), 1), 18))
+            fc = fmt_cell_alt if alt else fmt_cell
+            fn = fmt_num_alt  if alt else fmt_num
+            ws.write(5 + ri, 0, ri + 1,                                 fc)
+            ws.write(5 + ri, 1, cmd.get("client", ""),                  fc)
+            ws.write(5 + ri, 2, cmd.get("adresa_principala", ""),       fc)
+            ws.write(5 + ri, 3, cmd.get("telefon", ""),                 fc)
+            ws.write(5 + ri, 4, produse_str,                            fc)
+            ws.write(5 + ri, 5, total,                                  fn)
+            ws.write(5 + ri, 6, cmd.get("metoda_plata", "").upper(),    fc)
+
+        # Rand total
+        tr = 5 + len(comenzi)
+        ws.set_row(tr, 20)
+        ws.merge_range(tr, 0, tr, 4, f"TOTAL — {len(comenzi)} comenzi", fmt_total_txt)
+        ws.write(tr, 5, total_general, fmt_total_num)
+        ws.write(tr, 6, "",            fmt_total_txt)
+
+        # Rand semnături
+        ws.set_row(tr + 1, 8)
+        ws.set_row(tr + 2, 8)
+        sig_row = tr + 3
+        ws.set_row(sig_row, 36)
+        ws.merge_range(sig_row, 0, sig_row, 2,
+                       "Semnătură administrator: ____________________", fmt_sig)
+        ws.merge_range(sig_row, 4, sig_row, NC - 1,
+                       "Semnătură șofer: ____________________", fmt_sig)
+
+        # Footer
+        fs_row = sig_row + 2
+        ws.set_row(fs_row, 3)
+        for c in range(NC):
+            ws.write(fs_row, c, "", fmt_footer_sep)
+        ws.set_row(fs_row + 1, 16)
+        ws.merge_range(fs_row + 1, 0, fs_row + 1, NC - 1,
+                       f"Cantina Lotus  •  Str. Ing. Dumitru Ivanov 18, Tulcea  •  0746.358.018  •  Generat: {data_gen}",
+                       fmt_footer)
+
+    return output.getvalue()
+
+
 def export_to_excel_landscape_v2(df, sheet_name="Flyer_Meniu"):
     import io
     output = io.BytesIO()

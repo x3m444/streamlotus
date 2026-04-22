@@ -203,9 +203,11 @@ def save_comanda_finala(client_id, produse, total, sofer, ora, obs, plata, tip_c
         res = conn.execute(text("""
             INSERT INTO comenzi (
                 client_id, data_comanda, ora_livrare_estimata,
-                status, metoda_plata, total_plata, sofer, observatii, tip_comanda
+                status, metoda_plata, total_plata, sofer, observatii, tip_comanda,
+                created_at
             )
-            VALUES (:cid, :data_c, :ora, 'nou', :plata, :total, :sofer, :obs, :tip)
+            VALUES (:cid, :data_c, :ora, 'nou', :plata, :total, :sofer, :obs, :tip,
+                    NOW())
             RETURNING id
         """), {
             "cid": client_id, "data_c": data_comanda, "ora": ora_sql,
@@ -273,6 +275,11 @@ def get_rezumat_zi(data_filtrare=None, tip_comanda=None, status_filtru=None):
                 c.total_plata,
                 c.ora_livrare_estimata,
                 c.observatii,
+                c.created_at,
+                c.gatit_la,
+                c.pregatit_la,
+                c.pedrum_la,
+                c.livrat_la,
                 string_agg(l.cantitate || 'x ' || l.nume_produs || '|' || l.status, ', ') AS detalii
             FROM comenzi c
             JOIN clienti cl ON c.client_id = cl.id
@@ -292,7 +299,8 @@ def get_rezumat_zi(data_filtrare=None, tip_comanda=None, status_filtru=None):
             GROUP BY
                 c.id, c.client_id, c.status, c.sofer, cl.nume_client, cl.telefon,
                 cl.adresa_principala, c.metoda_plata, c.tip_comanda,
-                c.total_plata, c.ora_livrare_estimata, c.observatii
+                c.total_plata, c.ora_livrare_estimata, c.observatii,
+                c.created_at, c.gatit_la, c.pregatit_la, c.pedrum_la, c.livrat_la
             ORDER BY (c.client_id = 999) DESC, c.ora_livrare_estimata
         """
         return [dict(r._mapping) for r in conn.execute(text(query), params)]
@@ -382,6 +390,11 @@ def get_comenzi_receptie(data, status_filtru=None, sofer_filtru=None):
                 c.tip_comanda,
                 c.total_plata,
                 c.ora_livrare_estimata,
+                c.created_at,
+                c.gatit_la,
+                c.pregatit_la,
+                c.pedrum_la,
+                c.livrat_la,
                 string_agg(
                     l.cantitate || 'x ' || l.nume_produs || '|' || l.status,
                     ', ' ORDER BY l.id
@@ -406,7 +419,8 @@ def get_comenzi_receptie(data, status_filtru=None, sofer_filtru=None):
             GROUP BY
                 c.id, c.status, c.sofer, cl.nume_client, cl.telefon,
                 cl.adresa_principala, c.metoda_plata, c.tip_comanda,
-                c.total_plata, c.ora_livrare_estimata
+                c.total_plata, c.ora_livrare_estimata,
+                c.created_at, c.gatit_la, c.pregatit_la, c.pedrum_la, c.livrat_la
             ORDER BY c.ora_livrare_estimata
         """
         return [dict(r._mapping) for r in conn.execute(text(query), params)]
@@ -435,9 +449,17 @@ def get_raport_interval(data_start, data_end):
 
 def update_status_comanda(engine, comanda_id, noul_status):
     """Schimba statusul unei comenzi intregi (nou → pregatit → livrat)."""
+    col_ts = {
+        "pregatit": "pregatit_la",
+        "pedrum":   "pedrum_la",
+        "livrat":   "livrat_la",
+        "anulat":   None,
+    }.get(noul_status)
+
+    ts_fragment = f", {col_ts} = NOW()" if col_ts else ""
     with engine.begin() as conn:
         conn.execute(
-            text("UPDATE comenzi SET status = :status WHERE id = :id"),
+            text(f"UPDATE comenzi SET status = :status{ts_fragment} WHERE id = :id"),
             {"status": noul_status, "id": comanda_id}
         )
     get_comenzi_receptie.clear()
@@ -458,6 +480,20 @@ def update_status_batch(engine, data, nume_produs, noul_status):
             WHERE nume_produs = :nume
               AND comanda_id IN (SELECT id FROM comenzi WHERE data_comanda = :data)
         """), {"noul_status": noul_status, "data": data, "nume": nume_produs})
+
+        if noul_status == 'gatit':
+            # Seteaza gatit_la pe comenzile care au acum TOATE produsele gatite
+            conn.execute(text("""
+                UPDATE comenzi SET gatit_la = NOW()
+                WHERE data_comanda = :data
+                  AND gatit_la IS NULL
+                  AND id IN (
+                      SELECT comanda_id FROM comenzi_linii
+                      GROUP BY comanda_id
+                      HAVING COUNT(*) = COUNT(*) FILTER (WHERE status = 'gatit')
+                  )
+            """), {"data": data})
+
     get_loturi_productie.clear()
     get_comenzi_receptie.clear()
     get_stoc_zi.clear()
