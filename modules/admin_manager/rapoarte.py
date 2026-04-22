@@ -352,8 +352,9 @@ def show(data_plan):
                             aviz_key = f"aviz_admin_{cz['id']}"
                             if st.button("📋 Aviz", key=f"btn_{aviz_key}", width="stretch"):
                                 sofer_aviz = cz.get('sofer') or "Fără șofer"
+                                produse_aviz = db.get_produse_comanda(cz['id'])
                                 st.session_state[aviz_key] = utils.genereaza_aviz_excel(
-                                    [cz], sofer_aviz, data_plan
+                                    cz, sofer_aviz, data_plan, produse_aviz
                                 )
                             if aviz_key in st.session_state:
                                 st.download_button(

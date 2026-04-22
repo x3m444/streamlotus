@@ -128,8 +128,9 @@ def _render_card_livrare(cmd, actiune, sofer=None, data_azi=None):
         aviz_key = f"aviz_cmd_{cmd['id']}"
         with col_aviz_btn:
             if st.button("📋 Aviz", key=f"btn_{aviz_key}", width="stretch"):
+                produse_aviz = db.get_produse_comanda(cmd['id'])
                 st.session_state[aviz_key] = utils.genereaza_aviz_excel(
-                    [cmd], sofer, data_azi
+                    cmd, sofer, data_azi, produse_aviz
                 )
         with col_aviz_dl:
             if aviz_key in st.session_state:

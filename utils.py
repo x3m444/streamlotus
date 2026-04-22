@@ -527,161 +527,234 @@ def export_raport_firme(serviri, data):
     return output.getvalue()
 
 
-def genereaza_aviz_excel(comenzi: list, sofer: str, data) -> bytes:
-    """Genereaza aviz de expeditie marfa Excel pentru un sofer."""
-    output = io.BytesIO()
+FURNIZOR_AVIZ = {
+    "denumire": "LOTUS GRIGCONS SRL",
+    "reg_com":  "J2013000122364",
+    "cif":      "31417980",
+    "sediu":    "Str. Ing. Dumitru Ivanov 16, Bl. P3, Sc. A, Tulcea",
+    "judet":    "Tulcea",
+}
+
+
+def genereaza_aviz_excel(comanda: dict, sofer: str, data, produse: list, tva_pct: float = 11.0) -> bytes:
+    """
+    Aviz de insotire a marfii conform OMFP 2634/2015, model 14-3-6aA.
+    comanda : dict din get_rezumat_zi / get_comenzi_receptie
+    produse : lista din get_produse_comanda — preturi CU TVA inclus
+    tva_pct : cota TVA (implicit 11%)
+    """
+    output   = io.BytesIO()
     FONT     = "Segoe UI"
-    GRI_HDR  = "#3D3D3D"
-    GRI_ALT  = "#EBEBEB"
-    GRI_BRD  = "#AAAAAA"
-    GRI_FOOT = "#888888"
+    coef     = tva_pct / 100.0
     data_str = data.strftime("%d.%m.%Y") if hasattr(data, "strftime") else str(data)
     data_gen = get_ro_time().strftime("%d.%m.%Y %H:%M")
+    nr_aviz  = f"AVZ-{comanda.get('id', 0):06d}"
 
-    COL_HEADERS = ["Nr.", "Client", "Adresă", "Telefon", "Produse", "Total (lei)", "Plată"]
-    COL_W       = [5, 22, 30, 14, 38, 12, 10]
-    NC          = len(COL_HEADERS)
+    # Col: Nr.crt | Denumire | UM | Cant | Pret fara TVA | Valoare | TVA
+    COL_W = [5, 34, 8, 10, 16, 14, 14]
+    NC    = len(COL_W)
 
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
         workbook = writer.book
         ws = workbook.add_worksheet("Aviz")
         writer.sheets["Aviz"] = ws
 
-        ws.set_portrait()
-        ws.set_margins(0.4, 0.4, 0.5, 0.5)
+        ws.set_landscape()
+        ws.set_margins(0.5, 0.5, 0.5, 0.5)
         ws.set_print_scale(95)
         ws.center_horizontally()
-        ws.repeat_rows(0, 4)
+        ws.repeat_rows(0, 8)
 
         for ci, w in enumerate(COL_W):
             ws.set_column(ci, ci, w)
 
-        fmt_brand = workbook.add_format({
-            "bold": True, "font_size": 16, "font_name": FONT, "valign": "vcenter",
+        # ── Formate ────────────────────────────────────────────
+        fmt_bloc_hdr = workbook.add_format({
+            "font_name": FONT, "font_size": 9, "bold": True,
+            "fg_color": "#E0E0E0", "border": 1, "border_color": "#999999",
+            "valign": "vcenter",
         })
-        fmt_contact = workbook.add_format({
-            "font_size": 8, "font_color": GRI_FOOT, "font_name": FONT,
-            "align": "right", "valign": "vcenter", "text_wrap": True,
+        fmt_bloc_linie = workbook.add_format({
+            "font_name": FONT, "font_size": 9,
+            "border": 1, "border_color": "#CCCCCC", "valign": "vcenter",
+            "text_wrap": True,
         })
-        fmt_titlu = workbook.add_format({
-            "bold": True, "font_size": 13, "font_name": FONT,
+        fmt_titlu_doc = workbook.add_format({
+            "font_name": FONT, "font_size": 14, "bold": True,
             "align": "center", "valign": "vcenter",
-            "fg_color": GRI_HDR, "font_color": "white",
         })
-        fmt_info = workbook.add_format({
-            "font_size": 9, "font_name": FONT,
-            "align": "center", "valign": "vcenter",
-            "fg_color": "#F5F5F5", "italic": True,
+        fmt_nr_lbl = workbook.add_format({
+            "font_name": FONT, "font_size": 9, "bold": True,
+            "align": "right", "valign": "vcenter",
+            "border": 1, "border_color": "#999999",
         })
-        fmt_sep = workbook.add_format({"bottom": 2, "bottom_color": "#555555"})
+        fmt_nr_val = workbook.add_format({
+            "font_name": FONT, "font_size": 9,
+            "valign": "vcenter", "border": 1, "border_color": "#999999",
+        })
         fmt_col_hdr = workbook.add_format({
-            "bold": True, "font_size": 10, "font_name": FONT,
-            "fg_color": GRI_HDR, "font_color": "white",
+            "font_name": FONT, "font_size": 9, "bold": True,
+            "fg_color": "#3D3D3D", "font_color": "white",
             "align": "center", "valign": "vcenter",
-            "border": 1, "border_color": GRI_HDR, "text_wrap": True,
+            "border": 1, "border_color": "#1A1A1A", "text_wrap": True,
         })
         fmt_cell = workbook.add_format({
-            "font_size": 10, "font_name": FONT,
-            "border": 1, "border_color": GRI_BRD, "valign": "top", "text_wrap": True,
+            "font_name": FONT, "font_size": 9,
+            "border": 1, "border_color": "#AAAAAA", "valign": "vcenter",
         })
         fmt_cell_alt = workbook.add_format({
-            "font_size": 10, "font_name": FONT, "fg_color": GRI_ALT,
-            "border": 1, "border_color": GRI_BRD, "valign": "top", "text_wrap": True,
+            "font_name": FONT, "font_size": 9, "fg_color": "#F0F0F0",
+            "border": 1, "border_color": "#AAAAAA", "valign": "vcenter",
         })
         fmt_num = workbook.add_format({
-            "bold": True, "font_size": 10, "font_name": FONT,
-            "border": 1, "border_color": GRI_BRD,
-            "valign": "top", "align": "right", "num_format": "#,##0.00",
+            "font_name": FONT, "font_size": 9,
+            "border": 1, "border_color": "#AAAAAA",
+            "valign": "vcenter", "align": "right", "num_format": "#,##0.00",
         })
         fmt_num_alt = workbook.add_format({
-            "bold": True, "font_size": 10, "font_name": FONT, "fg_color": GRI_ALT,
-            "border": 1, "border_color": GRI_BRD,
-            "valign": "top", "align": "right", "num_format": "#,##0.00",
+            "font_name": FONT, "font_size": 9, "fg_color": "#F0F0F0",
+            "border": 1, "border_color": "#AAAAAA",
+            "valign": "vcenter", "align": "right", "num_format": "#,##0.00",
         })
-        fmt_total_txt = workbook.add_format({
-            "bold": True, "font_size": 10, "font_name": FONT,
-            "fg_color": "#D5D8DC", "border": 1, "border_color": GRI_HDR, "valign": "vcenter",
+        fmt_total_lbl = workbook.add_format({
+            "font_name": FONT, "font_size": 10, "bold": True,
+            "fg_color": "#D5D8DC", "border": 1, "border_color": "#3D3D3D",
+            "align": "center", "valign": "vcenter",
         })
         fmt_total_num = workbook.add_format({
-            "bold": True, "font_size": 10, "font_name": FONT,
-            "fg_color": "#D5D8DC", "border": 1, "border_color": GRI_HDR,
+            "font_name": FONT, "font_size": 10, "bold": True,
+            "fg_color": "#D5D8DC", "border": 1, "border_color": "#3D3D3D",
             "valign": "vcenter", "align": "right", "num_format": "#,##0.00",
         })
         fmt_sig = workbook.add_format({
-            "bold": True, "font_size": 10, "font_name": FONT, "valign": "vcenter",
+            "font_name": FONT, "font_size": 9, "bold": True, "valign": "vcenter",
         })
-        fmt_footer_sep = workbook.add_format({"top": 1, "top_color": "#555555"})
+        fmt_mentiune = workbook.add_format({
+            "font_name": FONT, "font_size": 9, "italic": True, "valign": "vcenter",
+        })
         fmt_footer = workbook.add_format({
-            "font_size": 8, "font_name": FONT, "font_color": GRI_FOOT,
-            "italic": True, "align": "center", "valign": "vcenter", "fg_color": "#F5F5F5",
+            "font_name": FONT, "font_size": 7, "italic": True,
+            "font_color": "#888888", "align": "center", "valign": "vcenter",
+            "fg_color": "#F5F5F5",
         })
 
-        # R0: brand + contact
-        ws.set_row(0, 32)
-        ws.merge_range(0, 0, 0, 4, "CANTINA LOTUS", fmt_brand)
-        ws.merge_range(0, 5, 0, NC - 1,
-                       "0746.358.018 | 0743.090.212\nStr. Ing. Dumitru Ivanov 18, Tulcea", fmt_contact)
+        # ── Blocuri FURNIZOR / CUMPĂRĂTOR (rânduri 0-5) ────────
+        def write_bloc(col_s, col_e, titlu, linii):
+            ws.set_row(0, 15)
+            ws.merge_range(0, col_s, 0, col_e, titlu, fmt_bloc_hdr)
+            for i, linie in enumerate(linii):
+                ws.set_row(i + 1, 13)
+                ws.merge_range(i + 1, col_s, i + 1, col_e, linie, fmt_bloc_linie)
 
-        # R1: titlu document
-        ws.set_row(1, 26)
-        ws.merge_range(1, 0, 1, NC - 1, "AVIZ DE EXPEDIȚIE MARFĂ", fmt_titlu)
+        furnizor_linii = [
+            f"Denumire: {FURNIZOR_AVIZ['denumire']}",
+            f"Nr. înmatriculare Reg. Com.: {FURNIZOR_AVIZ['reg_com']}",
+            f"Cod identificare fiscală: {FURNIZOR_AVIZ['cif']}",
+            f"Sediul: {FURNIZOR_AVIZ['sediu']}",
+            f"Județul: {FURNIZOR_AVIZ['judet']}",
+        ]
+        cumparator_linii = [
+            f"Denumire: {comanda.get('client', '')}",
+            "Nr. înmatriculare Reg. Com.: —",
+            "Cod identificare fiscală: —",
+            f"Sediul: {comanda.get('adresa_principala', '')}",
+            f"Telefon: {comanda.get('telefon', '')}",
+        ]
+        write_bloc(0, 2, "FURNIZOR", furnizor_linii)
+        write_bloc(3, 6, "CUMPĂRĂTOR", cumparator_linii)
 
-        # R2: info sofer + data
-        ws.set_row(2, 16)
-        ws.merge_range(2, 0, 2, NC - 1,
-                       f"Șofer: {sofer}  •  Data: {data_str}  •  Nr. comenzi: {len(comenzi)}", fmt_info)
+        # ── Titlu document (rând 6) ───────────────────────────
+        ws.set_row(6, 26)
+        ws.merge_range(6, 0, 6, NC - 1, "AVIZ DE ÎNSOȚIRE A MĂRFII", fmt_titlu_doc)
 
-        # R3: separator
-        ws.set_row(3, 3)
-        for c in range(NC):
-            ws.write(3, c, "", fmt_sep)
+        # ── Nr. + Data (rând 7) ───────────────────────────────
+        ws.set_row(7, 18)
+        ws.merge_range(7, 0, 7, 1, "Nr.", fmt_nr_lbl)
+        ws.merge_range(7, 2, 7, 3, nr_aviz, fmt_nr_val)
+        ws.merge_range(7, 4, 7, 5, "Data (ziua, luna, anul):", fmt_nr_lbl)
+        ws.write      (7, 6,        data_str, fmt_nr_val)
 
-        # R4: header coloane
-        ws.set_row(4, 26)
-        for ci, h in enumerate(COL_HEADERS):
-            ws.write(4, ci, h, fmt_col_hdr)
+        # ── Header tabel (rând 8) ─────────────────────────────
+        ws.set_row(8, 30)
+        tabel_hdrs = [
+            "Nr.\ncrt.",
+            "Denumirea produselor,\nambalajelor etc.",
+            "U.M.",
+            "Cantitatea",
+            f"Prețul unitar\n(fără T.V.A.)\n— lei —",
+            f"Valoarea\n— lei —\n(col.3 × col.4)",
+            f"Valoarea\nT.V.A.\n— lei —",
+        ]
+        for ci, h in enumerate(tabel_hdrs):
+            ws.write(8, ci, h, fmt_col_hdr)
 
-        # Comenzi
-        total_general = 0.0
-        for ri, cmd in enumerate(comenzi):
-            alt = (ri % 2 == 1)
-            detalii = cmd.get("detalii") or ""
-            produse_list = []
-            for parte in detalii.split(", "):
-                if "|" in parte:
-                    produse_list.append(parte.split("|")[0].strip())
-                elif parte.strip():
-                    produse_list.append(parte.strip())
-            produse_str = "\n".join(produse_list) if produse_list else "—"
-            total = float(cmd.get("total_plata", 0))
-            total_general += total
-            ws.set_row(5 + ri, max(15 * max(len(produse_list), 1), 18))
-            fc = fmt_cell_alt if alt else fmt_cell
-            fn = fmt_num_alt  if alt else fmt_num
-            ws.write(5 + ri, 0, ri + 1,                                 fc)
-            ws.write(5 + ri, 1, cmd.get("client", ""),                  fc)
-            ws.write(5 + ri, 2, cmd.get("adresa_principala", ""),       fc)
-            ws.write(5 + ri, 3, cmd.get("telefon", ""),                 fc)
-            ws.write(5 + ri, 4, produse_str,                            fc)
-            ws.write(5 + ri, 5, total,                                  fn)
-            ws.write(5 + ri, 6, cmd.get("metoda_plata", "").upper(),    fc)
+        # Rând index (conform model oficial: 0,1,2,3,4,5,6)
+        ws.set_row(9, 12)
+        for ci in range(NC):
+            ws.write(9, ci, str(ci), fmt_col_hdr)
 
-        # Rand total
-        tr = 5 + len(comenzi)
-        ws.set_row(tr, 20)
-        ws.merge_range(tr, 0, tr, 4, f"TOTAL — {len(comenzi)} comenzi", fmt_total_txt)
-        ws.write(tr, 5, total_general, fmt_total_num)
-        ws.write(tr, 6, "",            fmt_total_txt)
+        # ── Rânduri produse ───────────────────────────────────
+        DATA_R         = 10
+        total_fara_tva = 0.0
+        total_tva      = 0.0
 
-        # Rand semnături
-        ws.set_row(tr + 1, 8)
-        ws.set_row(tr + 2, 8)
-        sig_row = tr + 3
-        ws.set_row(sig_row, 36)
-        ws.merge_range(sig_row, 0, sig_row, 2,
-                       "Semnătură administrator: ____________________", fmt_sig)
-        ws.merge_range(sig_row, 4, sig_row, NC - 1,
-                       "Semnătură șofer: ____________________", fmt_sig)
+        for ri, p in enumerate(produse or []):
+            alt         = (ri % 2 == 1)
+            fc          = fmt_cell_alt if alt else fmt_cell
+            fn          = fmt_num_alt  if alt else fmt_num
+            pret_cu     = float(p.get("pret", 0))
+            cant        = float(p.get("cantitate", 1))
+            pret_fara   = pret_cu / (1 + coef)
+            val_fara    = cant * pret_fara
+            val_tva     = cant * pret_cu - val_fara
+            total_fara_tva += val_fara
+            total_tva      += val_tva
+
+            ws.set_row(DATA_R + ri, 16)
+            ws.write(DATA_R + ri, 0, ri + 1,             fc)
+            ws.write(DATA_R + ri, 1, p.get("nume", ""),  fc)
+            ws.write(DATA_R + ri, 2, "porție",           fc)
+            ws.write(DATA_R + ri, 3, int(cant),          fn)
+            ws.write(DATA_R + ri, 4, pret_fara,          fn)
+            ws.write(DATA_R + ri, 5, val_fara,           fn)
+            ws.write(DATA_R + ri, 6, val_tva,            fn)
+
+        # ── Total ─────────────────────────────────────────────
+        TR = DATA_R + len(produse or [])
+        ws.set_row(TR,     18)
+        ws.set_row(TR + 1, 18)
+        ws.merge_range(TR,     0, TR,     4, "TOTAL (col. 5 + col. 6)",          fmt_total_lbl)
+        ws.write      (TR,     5, total_fara_tva,                                fmt_total_num)
+        ws.write      (TR,     6, total_tva,                                     fmt_total_num)
+        ws.merge_range(TR + 1, 0, TR + 1, 4, f"TOTAL CU T.V.A. {tva_pct:.0f}%", fmt_total_lbl)
+        ws.merge_range(TR + 1, 5, TR + 1, 6, total_fara_tva + total_tva,        fmt_total_num)
+
+        # ── Mențiune factură + semnături ──────────────────────
+        SIG = TR + 3
+        ws.set_row(TR + 2, 8)
+        ws.set_row(SIG,    14)
+        ws.set_row(SIG+1,  36)
+        ws.set_row(SIG+2,  36)
+        ws.merge_range(SIG,   0, SIG,   NC-1,
+                       "Fără factură  □     Urmează factura nr. _____________  □",
+                       fmt_mentiune)
+        ws.merge_range(SIG+1, 0, SIG+1, 2,
+                       "Semnătură expeditor și ștampilă:\n____________________",
+                       fmt_sig)
+        ws.merge_range(SIG+1, 3, SIG+1, 4,
+                       f"Delegat (șofer): {sofer}\nAuto: ___________",
+                       fmt_sig)
+        ws.merge_range(SIG+1, 5, SIG+1, NC-1,
+                       "Semnătură primitor:\n____________________",
+                       fmt_sig)
+
+        # ── Footer ────────────────────────────────────────────
+        FR = SIG + 3
+        ws.set_row(FR, 14)
+        ws.merge_range(FR, 0, FR, NC - 1,
+                       f"LOTUS GRIGCONS SRL  •  CIF 31417980  •  J2013000122364  •  "
+                       f"Str. Ing. Dumitru Ivanov 16, Tulcea  •  Generat: {data_gen}",
+                       fmt_footer)
 
         # Footer
         fs_row = sig_row + 2
