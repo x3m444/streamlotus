@@ -440,6 +440,9 @@ def update_status_comanda(engine, comanda_id, noul_status):
             text("UPDATE comenzi SET status = :status WHERE id = :id"),
             {"status": noul_status, "id": comanda_id}
         )
+    get_comenzi_receptie.clear()
+    get_rezumat_zi.clear()
+    get_stoc_zi.clear()
 
 
 def update_status_batch(engine, data, nume_produs, noul_status):
@@ -455,6 +458,11 @@ def update_status_batch(engine, data, nume_produs, noul_status):
             WHERE nume_produs = :nume
               AND comanda_id IN (SELECT id FROM comenzi WHERE data_comanda = :data)
         """), {"noul_status": noul_status, "data": data, "nume": nume_produs})
+    get_loturi_productie.clear()
+    get_comenzi_receptie.clear()
+    get_stoc_zi.clear()
+    get_rezumat_zi.clear()
+    get_produse_gatite_azi.clear()
 
 
 # =============================================================
