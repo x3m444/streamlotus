@@ -756,16 +756,6 @@ def genereaza_aviz_excel(comanda: dict, sofer: str, data, produse: list, tva_pct
                        f"Str. Ing. Dumitru Ivanov 16, Tulcea  •  Generat: {data_gen}",
                        fmt_footer)
 
-        # Footer
-        fs_row = sig_row + 2
-        ws.set_row(fs_row, 3)
-        for c in range(NC):
-            ws.write(fs_row, c, "", fmt_footer_sep)
-        ws.set_row(fs_row + 1, 16)
-        ws.merge_range(fs_row + 1, 0, fs_row + 1, NC - 1,
-                       f"Cantina Lotus  •  Str. Ing. Dumitru Ivanov 18, Tulcea  •  0746.358.018  •  Generat: {data_gen}",
-                       fmt_footer)
-
     return output.getvalue()
 
 
