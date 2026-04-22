@@ -60,7 +60,7 @@ def show(data_selectata):
 
             with col_input:
                 qty = st.number_input(
-                    "Qty", min_value=0, max_value=500, value=0,
+                    "Qty", min_value=1, max_value=500, value=1,
                     step=1, key=f"buf_qty_{tip}",
                     label_visibility="collapsed"
                 )

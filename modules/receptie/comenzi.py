@@ -125,7 +125,7 @@ def show(data_selectata=None):
         with col_v1:
             with st.container(border=True):
                 st.markdown(f"**V1** — {nume_f1} + {nume_f2_v1}" + (f" + {nume_salata}" if lista_salate_plan else ""))
-                m_v1 = st.number_input("Porții:", min_value=0, step=1, key="rapid_v1", label_visibility="collapsed")
+                m_v1 = st.number_input("Porții:", min_value=1, step=1, key="rapid_v1", label_visibility="collapsed")
                 if st.button("➕ Adaugă Meniu V1", key="btn_m_v1_rapide", width="stretch", type="primary"):
                     if m_v1 > 0:
                         adauga_in_buffer(nume_f1, m_v1, pret_f1, "Meniu V1")
@@ -136,7 +136,7 @@ def show(data_selectata=None):
         with col_v2:
             with st.container(border=True):
                 st.markdown(f"**V2** — {nume_f1} + {nume_f2_v2}" + (f" + {nume_salata}" if lista_salate_plan else ""))
-                m_v2 = st.number_input("Porții:", min_value=0, step=1, key="rapid_v2", label_visibility="collapsed")
+                m_v2 = st.number_input("Porții:", min_value=1, step=1, key="rapid_v2", label_visibility="collapsed")
                 if st.button("➕ Adaugă Meniu V2", key="btn_m_v2_rapide", width="stretch", type="primary"):
                     if m_v2 > 0:
                         adauga_in_buffer(nume_f1, m_v2, pret_f1, "Meniu V2")
@@ -151,7 +151,7 @@ def show(data_selectata=None):
         with col_s1:
             with st.container(border=True):
                 st.markdown(f"**Solo** — {nume_f1}")
-                f1_s = st.number_input("Porții:", min_value=0, step=1, key="rapid_f1", label_visibility="collapsed")
+                f1_s = st.number_input("Porții:", min_value=1, step=1, key="rapid_f1", label_visibility="collapsed")
                 if st.button("➕ Adaugă", key="btn_s_f1_rapide", width="stretch"):
                     if f1_s > 0:
                         adauga_in_buffer(nume_f1, f1_s, pret_f1, "Solo")
@@ -159,7 +159,7 @@ def show(data_selectata=None):
         with col_s2:
             with st.container(border=True):
                 st.markdown(f"**Solo** — {nume_f2_v1}" + (f" + {nume_salata}" if lista_salate_plan else ""))
-                f2_v1 = st.number_input("Porții:", min_value=0, step=1, key="rapid_f2v1", label_visibility="collapsed")
+                f2_v1 = st.number_input("Porții:", min_value=1, step=1, key="rapid_f2v1", label_visibility="collapsed")
                 if st.button("➕ Adaugă", key="btn_s_f2v1_rapide", width="stretch"):
                     if f2_v1 > 0:
                         adauga_in_buffer(nume_f2_v1, f2_v1, pret_f2_v1, "Solo")
@@ -169,7 +169,7 @@ def show(data_selectata=None):
         with col_s3:
             with st.container(border=True):
                 st.markdown(f"**Solo** — {nume_f2_v2}" + (f" + {nume_salata}" if lista_salate_plan else ""))
-                f2_v2 = st.number_input("Porții:", min_value=0, step=1, key="rapid_f2v2", label_visibility="collapsed")
+                f2_v2 = st.number_input("Porții:", min_value=1, step=1, key="rapid_f2v2", label_visibility="collapsed")
                 if st.button("➕ Adaugă", key="btn_s_f2v2_rapide", width="stretch"):
                     if f2_v2 > 0:
                         adauga_in_buffer(nume_f2_v2, f2_v2, pret_f2_v2, "Solo")
