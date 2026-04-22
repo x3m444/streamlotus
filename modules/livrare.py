@@ -65,7 +65,7 @@ def show_livrare(sofer):
         st.subheader(f"📦 De preluat ({len(comenzi_pregatite)})")
 
         for cmd in comenzi_pregatite:
-            _render_card_livrare(cmd, actiune="preluat")
+            _render_card_livrare(cmd, actiune="preluat", sofer=sofer, data_azi=data_azi)
 
     # -------------------------------------------------------
     # SECTIUNEA 2: PE DRUM (status = 'pedrum')
@@ -75,10 +75,10 @@ def show_livrare(sofer):
         st.subheader(f"🛣️ Pe drum ({len(comenzi_pe_drum)})")
 
         for cmd in comenzi_pe_drum:
-            _render_card_livrare(cmd, actiune="livrat")
+            _render_card_livrare(cmd, actiune="livrat", sofer=sofer, data_azi=data_azi)
 
 
-def _render_card_livrare(cmd, actiune):
+def _render_card_livrare(cmd, actiune, sofer=None, data_azi=None):
     """
     Randeaza cardul unei comenzi pentru livrator.
     actiune: 'preluat' | 'livrat'
